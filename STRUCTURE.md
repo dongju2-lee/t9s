@@ -1,9 +1,9 @@
-# P9s 프로젝트 구조
+# T9s 프로젝트 구조
 
 ```
-P9s/
+T9s/
 ├── cmd/
-│   └── p9s/
+│   └── t9s/
 │       └── main.go              # CLI 진입점
 │
 ├── internal/
@@ -35,12 +35,12 @@ P9s/
 ├── go.mod                       # Go 모듈 정의
 ├── go.sum                       # 의존성 체크섬
 ├── .gitignore                   # Git 제외 파일
-└── p9s                          # 빌드된 바이너리 (gitignore됨)
+└── t9s                          # 빌드된 바이너리 (gitignore됨)
 ```
 
 ## 파일 설명
 
-### cmd/p9s/main.go
+### cmd/t9s/main.go
 - 애플리케이션 진입점
 - 버전 플래그 처리
 - UI 앱 초기화 및 실행
@@ -66,7 +66,7 @@ P9s/
 - 커밋 이력
 
 ### internal/config/config.go
-- ~/.p9s/config.yaml 관리
+- ~/.t9s/config.yaml 관리
 - Terraform root 경로
 - S3 backend 설정
 - 기본 옵션 (자동 새로고침 등)
@@ -85,13 +85,13 @@ require (
 
 - **바이너리 크기**: ~3.8MB
 - **플랫폼**: macOS (현재)
-- **설치 위치**: `/usr/local/bin/p9s`
+- **설치 위치**: `/usr/local/bin/t9s`
 
 ## 설정 파일 위치
 
-- **설정**: `~/.p9s/config.yaml`
-- **로그** (예정): `~/.p9s/logs/`
-- **캐시** (예정): `~/.p9s/cache/`
+- **설정**: `~/.t9s/config.yaml`
+- **로그** (예정): `~/.t9s/logs/`
+- **캐시** (예정): `~/.t9s/cache/`
 
 ## 다음 단계
 

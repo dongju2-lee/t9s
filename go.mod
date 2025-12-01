@@ -1,4 +1,4 @@
-module github.com/idongju/p9s
+module github.com/idongju/t9s
 
 go 1.20
 

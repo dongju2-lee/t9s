@@ -13,6 +13,7 @@ type Config struct {
 	TerraformRoot   string         `yaml:"terraform_root"`
 	Backend         BackendConfig  `yaml:"backend"`
 	Defaults        DefaultsConfig `yaml:"defaults"`
+	Commands        CommandsConfig `yaml:"commands"`
 }
 
 // BackendConfig represents the Terraform backend configuration
@@ -27,6 +28,14 @@ type DefaultsConfig struct {
 	AutoRefresh     bool `yaml:"auto_refresh"`
 	RefreshInterval int  `yaml:"refresh_interval"` // in seconds
 }
+
+// CommandsConfig represents terraform command templates
+type CommandsConfig struct {
+	PlanTemplate  string `yaml:"plan_template"`  // e.g. "terraform plan -var-file={varfile}"
+	ApplyTemplate string `yaml:"apply_template"` // e.g. "terraform apply -var-file={varfile}"
+	VarFile       string `yaml:"var_file"`       // e.g. "config/prod.tfvars"
+}
+
 
 // Load loads configuration from file
 func Load() (*Config, error) {
@@ -76,9 +85,9 @@ func (c *Config) Save() error {
 func getConfigPath() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return ".p9s/config.yaml"
+		return ".t9s/config.yaml"
 	}
-	return filepath.Join(home, ".p9s", "config.yaml")
+	return filepath.Join(home, ".t9s", "config.yaml")
 }
 
 // createDefaultConfig creates a default configuration
@@ -98,6 +107,11 @@ func createDefaultConfig(path string) (*Config, error) {
 		Defaults: DefaultsConfig{
 			AutoRefresh:     true,
 			RefreshInterval: 60,
+		},
+		Commands: CommandsConfig{
+			PlanTemplate:  "terraform plan -var-file={varfile}",
+			ApplyTemplate: "terraform apply -var-file={varfile}",
+			VarFile:       "config/prod.tfvars",
 		},
 	}
 

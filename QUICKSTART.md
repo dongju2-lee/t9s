@@ -1,22 +1,22 @@
-# P9s 빠른 시작 가이드
+# T9s 빠른 시작 가이드
 
 ## 1. 설치
 
 ```bash
-cd /Users/idongju/dev/P9s
+cd /Users/idongju/dev/T9s
 ./install.sh
 ```
 
 또는 수동으로:
 
 ```bash
-go build -o p9s ./cmd/p9s
-sudo mv p9s /usr/local/bin/
+go build -o t9s ./cmd/t9s
+sudo mv t9s /usr/local/bin/
 ```
 
 ## 2. 설정
 
-첫 실행 시 `~/.p9s/config.yaml` 파일이 자동으로 생성됩니다.
+첫 실행 시 `~/.t9s/config.yaml` 파일이 자동으로 생성됩니다.
 
 ```yaml
 # Terraform 루트 디렉토리 (서브 디렉토리에 s3, eks 등이 있는 경로)
@@ -38,7 +38,7 @@ defaults:
 ## 3. 실행
 
 ```bash
-p9s
+t9s
 ```
 
 ## 4. 키보드 단축키
@@ -70,7 +70,7 @@ p9s
 
 ## 5. 예상 디렉토리 구조
 
-P9s는 다음과 같은 구조를 권장합니다:
+T9s는 다음과 같은 구조를 권장합니다:
 
 ```
 terraform/
@@ -119,25 +119,25 @@ terraform init
 소스에서 직접 실행하려면:
 
 ```bash
-cd /Users/idongju/dev/P9s
-go run ./cmd/p9s
+cd /Users/idongju/dev/T9s
+go run ./cmd/t9s
 ```
 
 ## 8. 다음 단계
 
 - [ ] 실제 Terraform 디렉토리 경로로 설정 업데이트
 - [ ] 각 디렉토리에서 `terraform init` 실행
-- [ ] P9s 실행 및 테스트
+- [ ] T9s 실행 및 테스트
 - [ ] 키보드 단축키 익히기
 
 ## 9. 버전 확인
 
 ```bash
-p9s --version
+t9s --version
 ```
 
 ---
 
 **도움이 필요하신가요?**
-- GitHub Issues: https://github.com/idongju/p9s/issues
+- GitHub Issues: https://github.com/idongju/t9s/issues
 - 문서: README.md 참조

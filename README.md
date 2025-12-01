@@ -1,9 +1,9 @@
-# P9s - Terraform Infrastructure Manager
+# T9s - Terraform Infrastructure Manager
 
-![P9s Logo](https://img.shields.io/badge/P9s-Terraform%20TUI-blue)
+![T9s Logo](https://img.shields.io/badge/T9s-Terraform%20TUI-blue)
 ![Go Version](https://img.shields.io/badge/go-%3E%3D1.20-00ADD8)
 
-**P9s**는 k9s에서 영감을 받은 Terraform 인프라 관리를 위한 터미널 UI 도구입니다.
+**T9s**는 k9s에서 영감을 받은 Terraform 인프라 관리를 위한 터미널 UI 도구입니다.
 
 ## ✨ 주요 기능
 
@@ -20,10 +20,10 @@
 ### 방법 1: 소스에서 빌드
 
 ```bash
-git clone https://github.com/idongju/p9s.git
-cd p9s
-go build -o p9s ./cmd/p9s
-sudo mv p9s /usr/local/bin/
+git clone https://github.com/idongju/t9s.git
+cd t9s
+go build -o t9s ./cmd/t9s
+sudo mv t9s /usr/local/bin/
 ```
 
 ### 방법 2: 간편 설치 스크립트
@@ -37,13 +37,13 @@ sudo mv p9s /usr/local/bin/
 ### 기본 실행
 
 ```bash
-p9s
+t9s
 ```
 
 ### 버전 확인
 
 ```bash
-p9s --version
+t9s --version
 ```
 
 ## ⌨️ 키보드 단축키
@@ -69,7 +69,7 @@ p9s --version
 
 ## 🏗️ 프로젝트 구조
 
-P9s는 다음과 같은 Terraform 디렉토리 구조를 가정합니다:
+T9s는 다음과 같은 Terraform 디렉토리 구조를 가정합니다:
 
 ```
 terraform/
@@ -95,7 +95,7 @@ terraform/
 
 ## 🔧 설정
 
-P9s는 `~/.p9s/config.yaml` 파일을 통해 설정을 관리합니다:
+T9s는 `~/.t9s/config.yaml` 파일을 통해 설정을 관리합니다:
 
 ```yaml
 # Terraform 루트 디렉토리
@@ -116,7 +116,7 @@ defaults:
 
 ```
 ╔═══════════════════════════════════════════════════════════════════╗
-║  P9s - Terraform Infrastructure Manager  ║
+║  T9s - Terraform Infrastructure Manager  ║
 ╚═══════════════════════════════════════════════════════════════════╝
 
 ┌─ 📁 Terraform Directories ────────────┬─ 📋 Details ──────────────┐
