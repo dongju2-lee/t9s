@@ -142,10 +142,11 @@ Version:  v0.1.0                                       |_|  /_//__ /   /\__/ /
 
 ## 📚 문서
 
+- [QUICKSTART.md](QUICKSTART.md) - 빠른 시작 가이드
+- [SETTINGS_GUIDE.md](SETTINGS_GUIDE.md) - 설정 가이드 (Terraform Root Directory 등)
 - [ARCHITECTURE.md](ARCHITECTURE.md) - k9s 스타일 아키텍처 설명
 - [MIGRATION.md](MIGRATION.md) - v0.1.0에서 v0.2.0으로 마이그레이션 가이드
 - [STRUCTURE.md](STRUCTURE.md) - 기존 프로젝트 구조 (v0.1.0)
-- [QUICKSTART.md](QUICKSTART.md) - 빠른 시작 가이드
 
 ## 🤝 기여하기
 
