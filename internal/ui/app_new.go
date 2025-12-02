@@ -2,14 +2,17 @@ package ui
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/idongju/t9s/internal/config"
+	"github.com/idongju/t9s/internal/db"
 	"github.com/idongju/t9s/internal/ui/components"
 	"github.com/idongju/t9s/internal/ui/dialog"
 	"github.com/idongju/t9s/internal/view"
@@ -30,6 +33,7 @@ type AppNew struct {
 	
 	// Components
 	executor    *components.CommandExecutor
+	historyDB   *db.HistoryDB
 	
 	// State
 	currentDir  string
@@ -77,11 +81,19 @@ func NewAppNew() *AppNew {
 		}
 	}
 
+	// Initialize history DB
+	historyDB, err := db.NewHistoryDB()
+	if err != nil {
+		// Fallback if DB fails - app still works
+		fmt.Fprintf(os.Stderr, "Warning: Failed to initialize history DB: %v\n", err)
+	}
+
 	app := &AppNew{
 		tviewApp:   tview.NewApplication(),
 		currentDir: currentDir,
 		config:     cfg,
 		pages:      tview.NewPages(),
+		historyDB:  historyDB,
 	}
 
 	app.setupViews()
@@ -99,7 +111,7 @@ func (a *AppNew) setupViews() {
 	a.statusBar = view.NewStatusBar(a.currentDir)
 	
 	// Create executor
-	a.executor = components.NewCommandExecutor(a.tviewApp, a.contentView, a.config)
+	a.executor = components.NewCommandExecutor(a.tviewApp, a.contentView, a.config, a.historyDB)
 	
 	// Setup tree view handler
 	a.treeView.SetFileSelectHandler(func(path string) {
@@ -412,7 +424,48 @@ func (a *AppNew) executeTerraformCommand(action, workDir, cmdStr string) {
 		cmd := exec.Command(parts[0], parts[1:]...)
 		cmd.Dir = workDir
 		
+		startTime := time.Now()
 		output, err := cmd.CombinedOutput()
+		
+		// Save to history if it's apply or destroy
+		if (action == "Apply" || action == "Destroy") && a.historyDB != nil {
+			// Extract config file from command
+			configFile := ""
+			configData := ""
+			for i, part := range parts {
+				if strings.HasPrefix(part, "-var-file=") {
+					configFile = strings.TrimPrefix(part, "-var-file=")
+					// Read config file content
+					if data, readErr := ioutil.ReadFile(configFile); readErr == nil {
+						configData = string(data)
+					}
+					break
+				} else if part == "-var-file" && i+1 < len(parts) {
+					configFile = parts[i+1]
+					if data, readErr := ioutil.ReadFile(configFile); readErr == nil {
+						configData = string(data)
+					}
+					break
+				}
+			}
+			
+			entry := &db.HistoryEntry{
+				Directory:  workDir,
+				Action:     strings.ToLower(action),
+				Timestamp:  startTime,
+				ConfigFile: configFile,
+				ConfigData: configData,
+				Success:    err == nil,
+				ErrorMsg:   "",
+			}
+			if err != nil {
+				entry.ErrorMsg = err.Error()
+			}
+			
+			if saveErr := a.historyDB.AddEntry(entry); saveErr != nil {
+				fmt.Fprintf(os.Stderr, "Failed to save history: %v\n", saveErr)
+			}
+		}
 		
 		a.tviewApp.QueueUpdateDraw(func() {
 			if err != nil {
@@ -420,6 +473,11 @@ func (a *AppNew) executeTerraformCommand(action, workDir, cmdStr string) {
 			}
 			a.contentView.AppendText(string(output))
 			a.contentView.AppendText("\n\n[green]Done.[white]")
+			
+			// Show saved to history message
+			if action == "Apply" || action == "Destroy" {
+				a.contentView.AppendText("\n[gray](Saved to history)[white]")
+			}
 		})
 	}()
 }

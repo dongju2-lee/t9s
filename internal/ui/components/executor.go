@@ -9,6 +9,7 @@ import (
 
 	"github.com/rivo/tview"
 	"github.com/idongju/t9s/internal/config"
+	"github.com/idongju/t9s/internal/db"
 	"github.com/idongju/t9s/internal/view"
 )
 
@@ -17,14 +18,16 @@ type CommandExecutor struct {
 	app         *tview.Application
 	contentView *view.ContentView
 	config      *config.Config
+	historyDB   *db.HistoryDB
 }
 
 // NewCommandExecutor creates a new command executor
-func NewCommandExecutor(app *tview.Application, contentView *view.ContentView, cfg *config.Config) *CommandExecutor {
+func NewCommandExecutor(app *tview.Application, contentView *view.ContentView, cfg *config.Config, historyDB *db.HistoryDB) *CommandExecutor {
 	return &CommandExecutor{
 		app:         app,
 		contentView: contentView,
 		config:      cfg,
+		historyDB:   historyDB,
 	}
 }
 
@@ -51,6 +54,61 @@ func (ce *CommandExecutor) ShowHistory(path string) {
 	fmt.Fprintf(ce.contentView, "[cyan]Directory:[white] %s\n", path)
 	fmt.Fprintf(ce.contentView, "[cyan]%s[white]\n\n", strings.Repeat("─", 60))
 
+	// Show execution history from DB
+	if ce.historyDB != nil {
+		entries, err := ce.historyDB.GetByDirectory(path, 10)
+		if err == nil && len(entries) > 0 {
+			fmt.Fprintf(ce.contentView, "[yellow]📜 Execution History (Last 10):[white]\n\n")
+			for _, entry := range entries {
+				statusIcon := "✅"
+				statusColor := "green"
+				if !entry.Success {
+					statusIcon = "❌"
+					statusColor = "red"
+				}
+				
+				fmt.Fprintf(ce.contentView, "[%s]%s %s[white] - %s\n", 
+					statusColor, statusIcon, strings.ToUpper(entry.Action), 
+					entry.Timestamp.Format("2006-01-02 15:04:05"))
+				
+				if entry.ConfigFile != "" {
+					fmt.Fprintf(ce.contentView, "   [gray]Config:[white] %s\n", entry.ConfigFile)
+				}
+				
+				if !entry.Success && entry.ErrorMsg != "" {
+					fmt.Fprintf(ce.contentView, "   [red]Error:[white] %s\n", entry.ErrorMsg)
+				}
+				
+				// Show config data if available (truncated)
+				if entry.ConfigData != "" {
+					lines := strings.Split(entry.ConfigData, "\n")
+					if len(lines) > 3 {
+						fmt.Fprintf(ce.contentView, "   [cyan]Config (preview):[white]\n")
+						for i := 0; i < 3 && i < len(lines); i++ {
+							fmt.Fprintf(ce.contentView, "     %s\n", lines[i])
+						}
+						fmt.Fprintf(ce.contentView, "     [gray]... (%d more lines)[white]\n", len(lines)-3)
+					} else {
+						fmt.Fprintf(ce.contentView, "   [cyan]Config:[white]\n")
+						for _, line := range lines {
+							if line != "" {
+								fmt.Fprintf(ce.contentView, "     %s\n", line)
+							}
+						}
+					}
+				}
+				fmt.Fprintf(ce.contentView, "\n")
+			}
+			fmt.Fprintf(ce.contentView, "[cyan]%s[white]\n\n", strings.Repeat("─", 60))
+		} else if err != nil {
+			fmt.Fprintf(ce.contentView, "[red]Error reading history:[white] %v\n\n", err)
+		} else {
+			fmt.Fprintf(ce.contentView, "[gray]No execution history found for this directory.[white]\n\n")
+			fmt.Fprintf(ce.contentView, "[cyan]%s[white]\n\n", strings.Repeat("─", 60))
+		}
+	}
+
+	// Show state file info
 	statePath := filepath.Join(path, "terraform.tfstate")
 	stateInfo, err := os.Stat(statePath)
 	if err != nil {
@@ -61,10 +119,11 @@ func (ce *CommandExecutor) ShowHistory(path string) {
 			fmt.Fprintf(ce.contentView, "[red]Error checking state file:[white] %v\n", err)
 		}
 	} else {
-		fmt.Fprintf(ce.contentView, "[green]Last Local Apply:[white] %s\n", stateInfo.ModTime().Format("2006-01-02 15:04:05"))
-		fmt.Fprintf(ce.contentView, "[gray](Based on terraform.tfstate modification time)[white]\n\n")
+		fmt.Fprintf(ce.contentView, "[green]State File Last Modified:[white] %s\n", stateInfo.ModTime().Format("2006-01-02 15:04:05"))
+		fmt.Fprintf(ce.contentView, "[gray](terraform.tfstate modification time)[white]\n\n")
 	}
 
+	// Show current state summary
 	fmt.Fprintf(ce.contentView, "[cyan]Current State Summary (terraform show):[white]\n")
 	go func() {
 		cmd := exec.Command("terraform", "show", "-no-color")
