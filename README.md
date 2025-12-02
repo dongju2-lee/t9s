@@ -113,7 +113,7 @@ Version:  v0.1.0                                       |_|  /_//__ /   /\__/ /
 
 ## 🛠️ 개발 로드맵
 
-### v0.1.0 (Current)
+### v0.1.0
 - [x] Tree View 기반 파일 탐색
 - [x] Terraform Plan/Apply 실행
 - [x] Helm List 통합
@@ -121,15 +121,51 @@ Version:  v0.1.0                                       |_|  /_//__ /   /\__/ /
 - [x] 외부 에디터 연동
 - [x] k9s 스타일 UI
 
-### v0.2.0 (Next)
-- [ ] Git 상태 통합 (Diff, Branch 표시)
-- [ ] Terraform Drift 감지
-- [ ] 다중 워크스페이스 지원 강화
+### v0.2.0 (Current) - 아키텍처 개선
+- [x] **k9s 스타일 아키텍처 적용**
+  - [x] Model/DAO/View 패턴 도입
+  - [x] UI 컴포넌트 분리 (Header, Tree, Content, StatusBar)
+  - [x] 다이얼로그 시스템 (Confirm, Settings)
+  - [x] Command Executor 컴포넌트
+- [ ] 새로운 기능 추가
+  - [ ] Terraform 디렉토리 리스트 뷰
+  - [ ] Git 상태 통합 (Diff, Branch 표시)
+  - [ ] Terraform Drift 감지
+  - [ ] State 정보 테이블 뷰
+  - [ ] Workspace 전환 UI
+
+### v0.3.0 (Next)
+- [ ] 실시간 모니터링 기능
+- [ ] 리소스 그래프 뷰
 - [ ] 로그 뷰어 개선
+- [ ] 플러그인 시스템
+
+## 📚 문서
+
+- [ARCHITECTURE.md](ARCHITECTURE.md) - k9s 스타일 아키텍처 설명
+- [MIGRATION.md](MIGRATION.md) - v0.1.0에서 v0.2.0으로 마이그레이션 가이드
+- [STRUCTURE.md](STRUCTURE.md) - 기존 프로젝트 구조 (v0.1.0)
+- [QUICKSTART.md](QUICKSTART.md) - 빠른 시작 가이드
 
 ## 🤝 기여하기
 
 이슈 및 PR은 언제나 환영합니다!
+
+### 개발 환경 설정
+```bash
+# 저장소 클론
+git clone https://github.com/idongju/t9s.git
+cd t9s
+
+# 의존성 설치
+go mod download
+
+# 빌드
+go build ./...
+
+# 실행
+go run ./cmd/t9s
+```
 
 ## 📄 라이선스
 

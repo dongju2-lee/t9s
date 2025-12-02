@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	appVersion = "0.1.0"
+	appVersion = "0.2.0"
 	appName    = "T9s"
 )
 
@@ -18,7 +18,9 @@ func main() {
 		os.Exit(0)
 	}
 
-	app := ui.NewApp()
+	// Use new architecture (v0.2.0)
+	// To use legacy app: ui.NewApp()
+	app := ui.NewAppNew()
 	if err := app.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
