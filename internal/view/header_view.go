@@ -59,10 +59,10 @@ func (hv *HeaderView) buildHeader() {
 		SetTextAlign(tview.AlignLeft)
 	shortcuts.SetBackgroundColor(tcell.ColorBlack)
 	
-	fmt.Fprintf(shortcuts, "[yellow]<s>[white] Settings    [yellow]<p>[white] Plan\n")
-	fmt.Fprintf(shortcuts, "[yellow]<h>[white] History     [yellow]<a>[white] Apply\n")
-	fmt.Fprintf(shortcuts, "[yellow]<H>[white] Helm List   [yellow]<e>[white] Edit\n")
-	fmt.Fprintf(shortcuts, "[yellow]<Enter>[white] Select  [yellow]<q>[white] Quit")
+	fmt.Fprintf(shortcuts, "[yellow]<s>[white] Settings    [yellow]<p>[white] Plan      [yellow]<?>[white] Help\n")
+	fmt.Fprintf(shortcuts, "[yellow]<h>[white] History     [yellow]<a>[white] Apply     [yellow]</>[white] Command\n")
+	fmt.Fprintf(shortcuts, "[yellow]<e>[white] Edit        [yellow]<q>[white] Quit\n")
+	fmt.Fprintf(shortcuts, "[yellow]<Enter>[white] Select")
 
 	// Logo
 	logo := tview.NewTextView().

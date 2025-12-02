@@ -1,7 +1,11 @@
 package ui
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -17,10 +21,12 @@ type AppNew struct {
 	pages       *tview.Pages
 	
 	// Views
-	headerView  *view.HeaderView
-	treeView    *view.TreeView
-	contentView *view.ContentView
-	statusBar   *view.StatusBar
+	headerView   *view.HeaderView
+	treeView     *view.TreeView
+	contentView  *view.ContentView
+	statusBar    *view.StatusBar
+	helpView     *view.HelpView
+	commandView  *view.CommandView
 	
 	// Components
 	executor    *components.CommandExecutor
@@ -154,7 +160,16 @@ func (a *AppNew) setupKeyBindings() {
 				}
 				return nil
 			case 'H':
-				a.executor.ShowHelm()
+				// Shift+H: Show help
+				a.showHelp()
+				return nil
+			case '?':
+				// ?: Also show help
+				a.showHelp()
+				return nil
+			case '/':
+				// /: Command mode
+				a.showCommandInput()
 				return nil
 			case 'e', 'E':
 				if a.currentFile != "" {
@@ -263,6 +278,113 @@ func (a *AppNew) showApplyConfirmation() {
 	)
 
 	a.pages.AddPage("confirm_apply", confirmDialog, true, true)
+}
+
+// showHelp displays the help screen
+func (a *AppNew) showHelp() {
+	if a.helpView == nil {
+		a.helpView = view.NewHelpView()
+	}
+	
+	// Create modal with help view
+	modal := tview.NewFlex().
+		AddItem(nil, 0, 1, false).
+		AddItem(tview.NewFlex().
+			SetDirection(tview.FlexRow).
+			AddItem(nil, 0, 1, false).
+			AddItem(a.helpView, 30, 0, true).
+			AddItem(nil, 0, 1, false), 100, 0, true).
+		AddItem(nil, 0, 1, false)
+	modal.SetBackgroundColor(tcell.ColorBlack)
+	
+	// Setup input capture for help view
+	modal.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEscape || event.Rune() == 'q' || event.Rune() == '?' || event.Rune() == 'H' {
+			a.pages.RemovePage("help")
+			a.tviewApp.SetFocus(a.treeView)
+			return nil
+		}
+		return event
+	})
+	
+	a.pages.AddPage("help", modal, true, true)
+}
+
+// showCommandInput displays the command input bar
+func (a *AppNew) showCommandInput() {
+	// Get current selected path
+	path := a.treeView.GetCurrentPath()
+	if path == "" {
+		path = a.currentDir
+	}
+	
+	// Check if it's a file, if so use parent directory
+	info, err := os.Stat(path)
+	if err == nil && !info.IsDir() {
+		path = filepath.Dir(path)
+	}
+	
+	// Create or update command view
+	if a.commandView == nil {
+		a.commandView = view.NewCommandView(path)
+		a.commandView.SetExecuteHandler(func(cmd string) {
+			a.executeCommand(cmd)
+			a.pages.RemovePage("command")
+			a.tviewApp.SetFocus(a.treeView)
+		})
+	} else {
+		a.commandView.UpdatePath(path)
+		a.commandView.Clear()
+	}
+	
+	// Setup input capture
+	a.commandView.GetInput().SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEscape {
+			a.pages.RemovePage("command")
+			a.tviewApp.SetFocus(a.treeView)
+			return nil
+		}
+		return event
+	})
+	
+	a.pages.AddPage("command", a.commandView, true, true)
+	a.tviewApp.SetFocus(a.commandView.GetInput())
+}
+
+// executeCommand executes a command in the current directory
+func (a *AppNew) executeCommand(cmd string) {
+	if cmd == "" {
+		return
+	}
+	
+	workDir := a.commandView.GetCurrentDir()
+	
+	a.contentView.Clear()
+	a.contentView.SetTitle(" 🚀 Command Execution ")
+	fmt.Fprintf(a.contentView, "[yellow]Executing Command[white]\n")
+	fmt.Fprintf(a.contentView, "[cyan]Directory:[white] %s\n", workDir)
+	fmt.Fprintf(a.contentView, "[cyan]Command:[white] %s\n", cmd)
+	fmt.Fprintf(a.contentView, "[cyan]%s[white]\n\n", strings.Repeat("─", 60))
+	
+	go func() {
+		parts := strings.Fields(cmd)
+		if len(parts) == 0 {
+			return
+		}
+		
+		execCmd := exec.Command(parts[0], parts[1:]...)
+		execCmd.Dir = workDir
+		
+		output, err := execCmd.CombinedOutput()
+		
+		a.tviewApp.QueueUpdateDraw(func() {
+			if err != nil {
+				fmt.Fprintf(a.contentView, "[red]Error:[white] %v\n\n", err)
+			}
+			a.contentView.AppendText(string(output))
+			a.contentView.AppendText("\n\n[green]Done.[white]")
+		})
+	}()
 }
 
 // Run starts the application
