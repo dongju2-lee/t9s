@@ -31,6 +31,7 @@ func NewHelpView() *HelpView {
 	generalSection := hv.createSection("GENERAL", []HelpItem{
 		{"<esc>", "Back/Clear"},
 		{"</>", "Command Mode"},
+		{"<shift-c>", "Home (Commands)"},
 		{"<q>", "Quit"},
 		{"<ctrl-c>", "Quit"},
 		{"<?>", "Help"},

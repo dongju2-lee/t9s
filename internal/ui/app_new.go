@@ -108,7 +108,15 @@ func (a *AppNew) setupViews() {
 	a.treeView.SetChangedFunc(func(node *tview.TreeNode) {
 		reference := node.GetReference()
 		if reference != nil {
-			a.statusBar.UpdatePath(reference.(string))
+			path := reference.(string)
+			a.statusBar.UpdatePath(path)
+			
+			// Check if it's a directory
+			info, err := os.Stat(path)
+			if err == nil && info.IsDir() {
+				// Show welcome screen when moving to a directory
+				a.contentView.ShowWelcome()
+			}
 		}
 	})
 
@@ -170,6 +178,10 @@ func (a *AppNew) setupKeyBindings() {
 			case '/':
 				// /: Command mode
 				a.showCommandInput()
+				return nil
+			case 'C':
+				// Shift+C: Show available commands
+				a.contentView.ShowWelcome()
 				return nil
 			case 'e', 'E':
 				if a.currentFile != "" {

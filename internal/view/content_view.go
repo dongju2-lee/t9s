@@ -37,14 +37,18 @@ func NewContentView() *ContentView {
 // ShowWelcome displays the welcome message
 func (cv *ContentView) ShowWelcome() {
 	cv.Clear()
+	cv.SetTitle(" 📄 Content ")
 	fmt.Fprintf(cv, "[yellow]Welcome to T9s![white]\n\n")
 	fmt.Fprintf(cv, "Select a file from the tree to view its content.\n\n")
 	fmt.Fprintf(cv, "[cyan]Available Commands:[white]\n")
 	fmt.Fprintf(cv, "  • [green]h[white] - View terraform history\n")
-	fmt.Fprintf(cv, "  • [green]H[white] - View helm list (helm list -A)\n")
 	fmt.Fprintf(cv, "  • [green]p[white] - Terraform plan\n")
 	fmt.Fprintf(cv, "  • [green]a[white] - Terraform apply\n")
 	fmt.Fprintf(cv, "  • [green]e[white] - Edit current file\n")
+	fmt.Fprintf(cv, "  • [green]s[white] - Settings\n")
+	fmt.Fprintf(cv, "  • [green]?[white] or [green]Shift+H[white] - Help\n")
+	fmt.Fprintf(cv, "  • [green]/[white] - Command mode\n")
+	fmt.Fprintf(cv, "  • [green]Shift+C[white] - Show this screen\n")
 	fmt.Fprintf(cv, "  • [green]q[white] - Quit\n")
 }
 
