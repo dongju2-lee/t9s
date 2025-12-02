@@ -127,6 +127,14 @@ func (a *AppNew) setupViews() {
 // setupKeyBindings sets up global key bindings
 func (a *AppNew) setupKeyBindings() {
 	a.tviewApp.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		// Get current page name
+		currentPage, _ := a.pages.GetFrontPage()
+		
+		// Only handle global shortcuts when on main page
+		if currentPage != "main" {
+			return event
+		}
+		
 		switch event.Key() {
 		case tcell.KeyCtrlC:
 			a.tviewApp.Stop()

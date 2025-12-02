@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/rivo/tview"
 	"github.com/idongju/t9s/internal/config"
+	"github.com/rivo/tview"
 )
 
 // App represents the main application
@@ -105,7 +105,7 @@ func (a *App) setupUI() {
 
 	// Add pages
 	a.pages.AddPage("main", mainPage, true, true)
-	
+
 	a.tviewApp.SetRoot(a.pages, true)
 }
 
@@ -116,11 +116,11 @@ func (a *App) createHeader() *tview.Flex {
 		SetDynamicColors(true).
 		SetTextAlign(tview.AlignLeft)
 	infoText.SetBackgroundColor(tcell.ColorBlack)
-	
+
 	// Get user and hostname
 	user := os.Getenv("USER")
 	host, _ := os.Hostname()
-	
+
 	// Get terraform workspace
 	workspace := "default"
 	cmd := exec.Command("terraform", "workspace", "show")
@@ -139,7 +139,7 @@ func (a *App) createHeader() *tview.Flex {
 		SetDynamicColors(true).
 		SetTextAlign(tview.AlignLeft)
 	shortcuts.SetBackgroundColor(tcell.ColorBlack)
-	
+
 	fmt.Fprintf(shortcuts, "[yellow]<s>[white] Settings    [yellow]<p>[white] Plan\n")
 	fmt.Fprintf(shortcuts, "[yellow]<h>[white] History     [yellow]<a>[white] Apply\n")
 	fmt.Fprintf(shortcuts, "[yellow]<H>[white] Helm List   [yellow]<e>[white] Edit\n")
@@ -203,7 +203,7 @@ func (a *App) createTreeView() *tview.TreeView {
 
 		path := reference.(string)
 		children := node.GetChildren()
-		
+
 		if len(children) == 0 {
 			// If it's a file, display its content
 			info, err := os.Stat(path)
@@ -315,7 +315,7 @@ func (a *App) displayFile(path string) {
 
 	a.contentView.Clear()
 	a.contentView.SetTitle(fmt.Sprintf(" 📄 %s ", filepath.Base(path)))
-	
+
 	// Check if it's a tfvars file
 	if strings.HasSuffix(path, ".tfvars") {
 		fmt.Fprintf(a.contentView, "[yellow]File:[white] %s\n", path)
@@ -341,6 +341,14 @@ func (a *App) updateStatusBar(path string) {
 // setupKeyBindings sets up global key bindings
 func (a *App) setupKeyBindings() {
 	a.tviewApp.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		// Get current page name
+		currentPage, _ := a.pages.GetFrontPage()
+		
+		// Only handle global shortcuts when on main page
+		if currentPage != "main" {
+			return event
+		}
+		
 		switch event.Key() {
 		case tcell.KeyCtrlC:
 			a.tviewApp.Stop()
@@ -374,8 +382,6 @@ func (a *App) setupKeyBindings() {
 	})
 }
 
-
-
 // showHelm shows helm list -A output
 func (a *App) showHelm() {
 	a.contentView.Clear()
@@ -405,7 +411,7 @@ func (a *App) showHistory() {
 		return
 	}
 	path := node.GetReference().(string)
-	
+
 	// If file is selected, get parent dir
 	info, err := os.Stat(path)
 	if err == nil && !info.IsDir() {
@@ -439,7 +445,7 @@ func (a *App) showHistory() {
 		cmd := exec.Command("terraform", "show", "-no-color")
 		cmd.Dir = path
 		output, err := cmd.CombinedOutput()
-		
+
 		a.tviewApp.QueueUpdateDraw(func() {
 			if err != nil {
 				fmt.Fprintf(a.contentView, "[red]Error executing terraform show:[white] %v\n", err)
@@ -486,7 +492,7 @@ func (a *App) runTerraformCommand(action string, template string) {
 		return
 	}
 	path := node.GetReference().(string)
-	
+
 	var workDir string
 	var varFile string
 
@@ -536,13 +542,13 @@ func (a *App) runTerraformCommand(action string, template string) {
 		if len(parts) == 0 {
 			return
 		}
-		
+
 		cmd := exec.Command(parts[0], parts[1:]...)
 		cmd.Dir = workDir
-		
+
 		// Capture output
 		output, err := cmd.CombinedOutput()
-		
+
 		a.tviewApp.QueueUpdateDraw(func() {
 			if err != nil {
 				fmt.Fprintf(a.contentView, "[red]Error executing command:[white] %v\n", err)
@@ -575,7 +581,7 @@ func (a *App) editCurrentFile() {
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		
+
 		if err := cmd.Run(); err != nil {
 			fmt.Printf("Error running editor: %v\nPress Enter to continue...", err)
 			fmt.Scanln()
