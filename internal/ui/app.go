@@ -35,20 +35,30 @@ func NewApp() *App {
 	tview.Styles.BorderColor = tcell.NewRGBColor(0, 255, 255) // Cyan
 	tview.Styles.TitleColor = tcell.NewRGBColor(255, 215, 0)  // Yellow
 
-	currentDir, err := os.Getwd()
-	if err != nil {
-		currentDir = "."
-	}
-
 	// Load config
 	cfg, err := config.Load()
 	if err != nil {
+		// Fallback to current directory
+		currentDir, _ := os.Getwd()
+		if currentDir == "" {
+			currentDir = "."
+		}
 		cfg = &config.Config{
+			TerraformRoot: currentDir,
 			Commands: config.CommandsConfig{
 				PlanTemplate:  "terraform plan -var-file={varfile}",
 				ApplyTemplate: "terraform apply -var-file={varfile}",
 				VarFile:       "config/prod.tfvars",
 			},
+		}
+	}
+
+	// Use TerraformRoot from config as the starting directory
+	currentDir := cfg.TerraformRoot
+	if currentDir == "" {
+		currentDir, _ = os.Getwd()
+		if currentDir == "" {
+			currentDir = "."
 		}
 	}
 
@@ -584,6 +594,9 @@ func (a *App) Run() error {
 // showSettings displays the settings page
 func (a *App) showSettings() {
 	form := tview.NewForm().
+		AddInputField("Terraform Root Directory", a.config.TerraformRoot, 60, nil, func(text string) {
+			a.config.TerraformRoot = text
+		}).
 		AddInputField("Terraform Plan Template", a.config.Commands.PlanTemplate, 60, nil, func(text string) {
 			a.config.Commands.PlanTemplate = text
 		}).
@@ -598,6 +611,11 @@ func (a *App) showSettings() {
 				a.contentView.Clear()
 				fmt.Fprintf(a.contentView, "[red]Error saving config: %v[white]", err)
 			} else {
+				// If TerraformRoot changed, rebuild the UI
+				if a.config.TerraformRoot != a.currentDir {
+					a.currentDir = a.config.TerraformRoot
+					a.setupUI()
+				}
 				a.pages.SwitchToPage("main")
 				a.tviewApp.SetFocus(a.tree)
 			}
@@ -631,6 +649,8 @@ func (a *App) showSettings() {
 		SetDynamicColors(true).
 		SetTextAlign(tview.AlignLeft)
 	help.SetBackgroundColor(tcell.ColorBlack)
+	fmt.Fprintf(help, "\n[yellow]Terraform Root Directory:[white]\n")
+	fmt.Fprintf(help, "  Directory where your Terraform code is located (e.g., /home/user/terraform)\n")
 	fmt.Fprintf(help, "\n[yellow]Template Variables:[white]\n")
 	fmt.Fprintf(help, "  [cyan]{varfile}[white] - Will be replaced with the var file path\n")
 	fmt.Fprintf(help, "\n[yellow]Examples:[white]\n")
@@ -641,7 +661,7 @@ func (a *App) showSettings() {
 		SetDirection(tview.FlexRow).
 		AddItem(header, 3, 0, false).
 		AddItem(form, 0, 1, true).
-		AddItem(help, 7, 0, false)
+		AddItem(help, 9, 0, false)
 	settingsLayout.SetBackgroundColor(tcell.ColorBlack)
 
 	a.pages.AddPage("settings", settingsLayout, true, false)

@@ -41,20 +41,30 @@ func NewAppNew() *AppNew {
 	tview.Styles.BorderColor = tcell.NewRGBColor(0, 255, 255)
 	tview.Styles.TitleColor = tcell.NewRGBColor(255, 215, 0)
 
-	currentDir, err := os.Getwd()
-	if err != nil {
-		currentDir = "."
-	}
-
 	// Load config
 	cfg, err := config.Load()
 	if err != nil {
+		// Fallback to current directory
+		currentDir, _ := os.Getwd()
+		if currentDir == "" {
+			currentDir = "."
+		}
 		cfg = &config.Config{
+			TerraformRoot: currentDir,
 			Commands: config.CommandsConfig{
 				PlanTemplate:  "terraform plan -var-file={varfile}",
 				ApplyTemplate: "terraform apply -var-file={varfile}",
 				VarFile:       "config/prod.tfvars",
 			},
+		}
+	}
+
+	// Use TerraformRoot from config as the starting directory
+	currentDir := cfg.TerraformRoot
+	if currentDir == "" {
+		currentDir, _ = os.Getwd()
+		if currentDir == "" {
+			currentDir = "."
 		}
 	}
 
@@ -164,6 +174,29 @@ func (a *AppNew) showSettings() {
 	settingsDialog := dialog.NewSettingsDialog(
 		a.config,
 		func() {
+			// Check if TerraformRoot changed
+			if a.config.TerraformRoot != a.currentDir {
+				// Rebuild tree view with new root directory
+				a.currentDir = a.config.TerraformRoot
+				a.treeView = view.NewTreeView(a.currentDir)
+				a.treeView.SetFileSelectHandler(func(path string) {
+					a.currentFile = path
+					a.contentView.DisplayFile(path)
+				})
+				a.treeView.SetChangedFunc(func(node *tview.TreeNode) {
+					reference := node.GetReference()
+					if reference != nil {
+						a.statusBar.UpdatePath(reference.(string))
+					}
+				})
+				
+				// Rebuild header and status bar
+				a.headerView = view.NewHeaderView(a.currentDir)
+				a.statusBar = view.NewStatusBar(a.currentDir)
+				
+				// Rebuild main layout
+				a.rebuildMainPage()
+			}
 			a.pages.SwitchToPage("main")
 			a.tviewApp.SetFocus(a.treeView)
 		},
@@ -180,6 +213,26 @@ func (a *AppNew) showSettings() {
 	a.pages.AddPage("settings", settingsDialog, true, false)
 	a.pages.SwitchToPage("settings")
 	a.tviewApp.SetFocus(settingsDialog.GetForm())
+}
+
+// rebuildMainPage rebuilds the main page with updated views
+func (a *AppNew) rebuildMainPage() {
+	// Main content layout
+	mainFlex := tview.NewFlex().
+		AddItem(a.treeView, 0, 1, true).
+		AddItem(a.contentView, 0, 2, false)
+	mainFlex.SetBackgroundColor(tcell.ColorBlack)
+
+	// Root layout
+	mainPage := tview.NewFlex().
+		SetDirection(tview.FlexRow).
+		AddItem(a.headerView, 6, 0, false).
+		AddItem(mainFlex, 0, 1, true).
+		AddItem(a.statusBar, 1, 0, false)
+	mainPage.SetBackgroundColor(tcell.ColorBlack)
+
+	a.pages.RemovePage("main")
+	a.pages.AddPage("main", mainPage, true, true)
 }
 
 // showApplyConfirmation shows confirmation dialog for terraform apply

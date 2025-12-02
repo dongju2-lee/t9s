@@ -23,6 +23,9 @@ func NewSettingsDialog(cfg *config.Config, onSave, onCancel func()) *SettingsDia
 	}
 
 	form := tview.NewForm().
+		AddInputField("Terraform Root Directory", cfg.TerraformRoot, 60, nil, func(text string) {
+			cfg.TerraformRoot = text
+		}).
 		AddInputField("Terraform Plan Template", cfg.Commands.PlanTemplate, 60, nil, func(text string) {
 			cfg.Commands.PlanTemplate = text
 		}).
@@ -61,6 +64,8 @@ func NewSettingsDialog(cfg *config.Config, onSave, onCancel func()) *SettingsDia
 		SetDynamicColors(true).
 		SetTextAlign(tview.AlignLeft)
 	help.SetBackgroundColor(tcell.ColorBlack)
+	fmt.Fprintf(help, "\n[yellow]Terraform Root Directory:[white]\n")
+	fmt.Fprintf(help, "  Directory where your Terraform code is located (e.g., /home/user/terraform)\n")
 	fmt.Fprintf(help, "\n[yellow]Template Variables:[white]\n")
 	fmt.Fprintf(help, "  [cyan]{varfile}[white] - Will be replaced with the var file path\n")
 	fmt.Fprintf(help, "\n[yellow]Examples:[white]\n")
@@ -70,7 +75,7 @@ func NewSettingsDialog(cfg *config.Config, onSave, onCancel func()) *SettingsDia
 	sd.SetDirection(tview.FlexRow).
 		AddItem(header, 3, 0, false).
 		AddItem(form, 0, 1, true).
-		AddItem(help, 7, 0, false)
+		AddItem(help, 9, 0, false)
 	sd.SetBackgroundColor(tcell.ColorBlack)
 
 	sd.form = form
