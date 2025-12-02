@@ -30,6 +30,7 @@ type AppNew struct {
 	statusBar    *view.StatusBar
 	helpView     *view.HelpView
 	commandView  *view.CommandView
+	historyView  *view.HistoryView
 	
 	// Components
 	executor    *components.CommandExecutor
@@ -179,7 +180,7 @@ func (a *AppNew) setupKeyBindings() {
 			case 'h':
 				path := a.treeView.GetCurrentPath()
 				if path != "" {
-					a.executor.ShowHistory(path)
+					a.showHistory(path)
 				}
 				return nil
 			case 'H':
@@ -510,6 +511,61 @@ func (a *AppNew) showHelp() {
 	})
 	
 	a.pages.AddPage("help", modal, true, true)
+}
+
+// showHistory shows the history screen
+func (a *AppNew) showHistory(path string) {
+	// Get directory path
+	info, err := os.Stat(path)
+	if err == nil && !info.IsDir() {
+		path = filepath.Dir(path)
+	}
+
+	// Get history from DB
+	var entries []*db.HistoryEntry
+	if a.historyDB != nil {
+		entries, err = a.historyDB.GetByDirectory(path, 100) // Get up to 100 entries
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error reading history: %v\n", err)
+			entries = []*db.HistoryEntry{}
+		}
+	}
+
+	// Create history view
+	a.historyView = view.NewHistoryView(path, entries)
+	
+	// Set up key handler for history view
+	a.historyView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyEscape:
+			a.pages.RemovePage("history")
+			a.tviewApp.SetFocus(a.treeView)
+			return nil
+		case tcell.KeyRune:
+			switch event.Rune() {
+			case 'M':
+				// Shift+M: Toggle details
+				a.historyView.ToggleDetails()
+				return nil
+			}
+		case tcell.KeyDown:
+			if event.Modifiers()&tcell.ModShift != 0 {
+				// Shift+Down: Load more
+				a.historyView.LoadMore()
+				return nil
+			}
+		case tcell.KeyUp:
+			if event.Modifiers()&tcell.ModShift != 0 {
+				// Shift+Up: Load less (go back)
+				a.historyView.LoadLess()
+				return nil
+			}
+		}
+		return event
+	})
+
+	a.pages.AddPage("history", a.historyView, true, true)
+	a.tviewApp.SetFocus(a.historyView)
 }
 
 // showCommandInput displays the command input bar

@@ -39,6 +39,13 @@ func NewHelpView() *HelpView {
 		{"<?>", "Help"},
 		{"<shift-h>", "Help"},
 	})
+	
+	historySection := hv.createSection("HISTORY VIEW", []HelpItem{
+		{"<h>", "Show History"},
+		{"<shift-m>", "Toggle Details"},
+		{"<shift-↓>", "Load More (3)"},
+		{"<shift-↑>", "Load Less"},
+	})
 
 	navigationSection := hv.createSection("NAVIGATION", []HelpItem{
 		{"<↑/↓>", "Navigate"},
@@ -64,10 +71,16 @@ func NewHelpView() *HelpView {
 		AddItem(navigationSection, 0, 1, false).
 		AddItem(tfSection, 0, 1, false)
 	bottomRow.SetBackgroundColor(tcell.ColorBlack)
+	
+	thirdRow := tview.NewFlex().
+		AddItem(historySection, 0, 1, false).
+		AddItem(tview.NewBox().SetBackgroundColor(tcell.ColorBlack), 0, 1, false)
+	thirdRow.SetBackgroundColor(tcell.ColorBlack)
 
 	hv.SetDirection(tview.FlexRow).
 		AddItem(topRow, 0, 1, false).
-		AddItem(bottomRow, 0, 1, false)
+		AddItem(bottomRow, 0, 1, false).
+		AddItem(thirdRow, 0, 1, false)
 	hv.SetBackgroundColor(tcell.ColorBlack)
 	hv.SetBorder(true)
 	hv.SetBorderColor(tcell.NewRGBColor(0, 255, 255))
