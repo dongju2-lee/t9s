@@ -46,9 +46,12 @@ func NewApp() *App {
 		cfg = &config.Config{
 			TerraformRoot: currentDir,
 			Commands: config.CommandsConfig{
-				PlanTemplate:  "terraform plan -var-file={varfile}",
-				ApplyTemplate: "terraform apply -var-file={varfile}",
-				VarFile:       "config/prod.tfvars",
+				InitTemplate:    "terraform init -backend-config={initconf}",
+				PlanTemplate:    "terraform plan -var-file={varfile}",
+				ApplyTemplate:   "terraform apply -var-file={varfile}",
+				DestroyTemplate: "terraform destroy -var-file={varfile}",
+				TfvarsFile:      "config/env.tfvars",
+				InitConfFile:    "config/env.conf",
 			},
 		}
 	}
@@ -507,7 +510,7 @@ func (a *App) runTerraformCommand(action string, template string) {
 		// If directory selected
 		workDir = path
 		// Try to find default var file
-		defaultVar := filepath.Join(workDir, a.config.Commands.VarFile)
+		defaultVar := filepath.Join(workDir, a.config.Commands.TfvarsFile)
 		if _, err := os.Stat(defaultVar); err == nil {
 			varFile = defaultVar
 		}
@@ -609,8 +612,8 @@ func (a *App) showSettings() {
 		AddInputField("Terraform Apply Template", a.config.Commands.ApplyTemplate, 60, nil, func(text string) {
 			a.config.Commands.ApplyTemplate = text
 		}).
-		AddInputField("Default Var File", a.config.Commands.VarFile, 60, nil, func(text string) {
-			a.config.Commands.VarFile = text
+		AddInputField("Default tfvars File", a.config.Commands.TfvarsFile, 60, nil, func(text string) {
+			a.config.Commands.TfvarsFile = text
 		}).
 		AddButton("Save", func() {
 			if err := a.config.Save(); err != nil {

@@ -140,7 +140,7 @@ func (ce *CommandExecutor) runTerraformCommand(action string, path string, templ
 		}
 	} else {
 		workDir = path
-		defaultVar := filepath.Join(workDir, ce.config.Commands.VarFile)
+		defaultVar := filepath.Join(workDir, ce.config.Commands.TfvarsFile)
 		if _, err := os.Stat(defaultVar); err == nil {
 			varFile = defaultVar
 		}

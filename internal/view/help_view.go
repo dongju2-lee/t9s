@@ -22,8 +22,10 @@ func NewHelpView() *HelpView {
 	resourceSection := hv.createSection("RESOURCE", []HelpItem{
 		{"<enter>", "Expand/View"},
 		{"<e>", "Edit File"},
+		{"<i>", "Terraform Init"},
 		{"<p>", "Terraform Plan"},
 		{"<a>", "Terraform Apply"},
+		{"<d>", "Terraform Destroy"},
 		{"<h>", "History"},
 		{"<s>", "Settings"},
 	})
@@ -45,8 +47,10 @@ func NewHelpView() *HelpView {
 	})
 
 	tfSection := hv.createSection("TERRAFORM", []HelpItem{
+		{"<i>", "Init"},
 		{"<p>", "Plan"},
 		{"<a>", "Apply"},
+		{"<d>", "Destroy"},
 		{"<h>", "Show History"},
 	})
 

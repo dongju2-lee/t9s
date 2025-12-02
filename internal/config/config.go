@@ -31,9 +31,12 @@ type DefaultsConfig struct {
 
 // CommandsConfig represents terraform command templates
 type CommandsConfig struct {
-	PlanTemplate  string `yaml:"plan_template"`  // e.g. "terraform plan -var-file={varfile}"
-	ApplyTemplate string `yaml:"apply_template"` // e.g. "terraform apply -var-file={varfile}"
-	VarFile       string `yaml:"var_file"`       // e.g. "config/prod.tfvars"
+	InitTemplate    string `yaml:"init_template"`    // e.g. "terraform init -backend-config={initconf}"
+	PlanTemplate    string `yaml:"plan_template"`    // e.g. "terraform plan -var-file={varfile}"
+	ApplyTemplate   string `yaml:"apply_template"`   // e.g. "terraform apply -var-file={varfile}"
+	DestroyTemplate string `yaml:"destroy_template"` // e.g. "terraform destroy -var-file={varfile}"
+	TfvarsFile      string `yaml:"tfvars_file"`      // e.g. "config/env.tfvars"
+	InitConfFile    string `yaml:"init_conf_file"`   // e.g. "config/env.conf"
 }
 
 
@@ -109,9 +112,12 @@ func createDefaultConfig(path string) (*Config, error) {
 			RefreshInterval: 60,
 		},
 		Commands: CommandsConfig{
-			PlanTemplate:  "terraform plan -var-file={varfile}",
-			ApplyTemplate: "terraform apply -var-file={varfile}",
-			VarFile:       "config/prod.tfvars",
+			InitTemplate:    "terraform init -backend-config={initconf}",
+			PlanTemplate:    "terraform plan -var-file={varfile}",
+			ApplyTemplate:   "terraform apply -var-file={varfile}",
+			DestroyTemplate: "terraform destroy -var-file={varfile}",
+			TfvarsFile:      "config/env.tfvars",
+			InitConfFile:    "config/env.conf",
 		},
 	}
 

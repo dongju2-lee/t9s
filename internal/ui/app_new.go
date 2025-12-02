@@ -58,9 +58,12 @@ func NewAppNew() *AppNew {
 		cfg = &config.Config{
 			TerraformRoot: currentDir,
 			Commands: config.CommandsConfig{
-				PlanTemplate:  "terraform plan -var-file={varfile}",
-				ApplyTemplate: "terraform apply -var-file={varfile}",
-				VarFile:       "config/prod.tfvars",
+				InitTemplate:    "terraform init -backend-config={initconf}",
+				PlanTemplate:    "terraform plan -var-file={varfile}",
+				ApplyTemplate:   "terraform apply -var-file={varfile}",
+				DestroyTemplate: "terraform destroy -var-file={varfile}",
+				TfvarsFile:      "config/env.tfvars",
+				InitConfFile:    "config/env.conf",
 			},
 		}
 	}
@@ -189,14 +192,30 @@ func (a *AppNew) setupKeyBindings() {
 					a.contentView.DisplayFile(a.currentFile)
 				}
 				return nil
-			case 'p':
+			case 'i', 'I':
+				// i: Terraform init
 				path := a.treeView.GetCurrentPath()
 				if path != "" {
-					a.executor.ExecutePlan(path)
+					a.showInitConfirmation(path)
+				}
+				return nil
+			case 'p':
+				// p: Terraform plan
+				path := a.treeView.GetCurrentPath()
+				if path != "" {
+					a.showPlanConfirmation(path)
 				}
 				return nil
 			case 'a':
+				// a: Terraform apply
 				a.showApplyConfirmation()
+				return nil
+			case 'd', 'D':
+				// d: Terraform destroy
+				path := a.treeView.GetCurrentPath()
+				if path != "" {
+					a.showDestroyConfirmation(path)
+				}
 				return nil
 			}
 		}
@@ -270,6 +289,56 @@ func (a *AppNew) rebuildMainPage() {
 	a.pages.AddPage("main", mainPage, true, true)
 }
 
+// showInitConfirmation shows confirmation dialog for terraform init
+func (a *AppNew) showInitConfirmation(path string) {
+	info := components.GetTerraformCommandInfo(path, a.config.Commands.InitTemplate, a.config.Commands.InitConfFile, a.config)
+	
+	confirmDialog := dialog.NewTerraformConfirmDialog(
+		"terraform init",
+		info.WorkDir,
+		info.ConfigFile,
+		info.Content,
+		func() {
+			a.pages.RemovePage("confirm_tf")
+			a.executeTerraformCommand("Init", info.WorkDir, info.Command)
+		},
+		func() {
+			a.pages.RemovePage("confirm_tf")
+			a.tviewApp.SetFocus(a.treeView)
+		},
+	)
+
+	a.pages.AddPage("confirm_tf", confirmDialog, true, true)
+	if form := confirmDialog.GetForm(); form != nil {
+		a.tviewApp.SetFocus(form)
+	}
+}
+
+// showPlanConfirmation shows confirmation dialog for terraform plan
+func (a *AppNew) showPlanConfirmation(path string) {
+	info := components.GetTerraformCommandInfo(path, a.config.Commands.PlanTemplate, a.config.Commands.TfvarsFile, a.config)
+	
+	confirmDialog := dialog.NewTerraformConfirmDialog(
+		"terraform plan",
+		info.WorkDir,
+		info.ConfigFile,
+		info.Content,
+		func() {
+			a.pages.RemovePage("confirm_tf")
+			a.executeTerraformCommand("Plan", info.WorkDir, info.Command)
+		},
+		func() {
+			a.pages.RemovePage("confirm_tf")
+			a.tviewApp.SetFocus(a.treeView)
+		},
+	)
+
+	a.pages.AddPage("confirm_tf", confirmDialog, true, true)
+	if form := confirmDialog.GetForm(); form != nil {
+		a.tviewApp.SetFocus(form)
+	}
+}
+
 // showApplyConfirmation shows confirmation dialog for terraform apply
 func (a *AppNew) showApplyConfirmation() {
 	path := a.treeView.GetCurrentPath()
@@ -277,19 +346,82 @@ func (a *AppNew) showApplyConfirmation() {
 		return
 	}
 
-	confirmDialog := dialog.NewConfirmDialog(
-		"Are you sure you want to execute terraform apply?",
+	info := components.GetTerraformCommandInfo(path, a.config.Commands.ApplyTemplate, a.config.Commands.TfvarsFile, a.config)
+	
+	confirmDialog := dialog.NewTerraformConfirmDialog(
+		"terraform apply",
+		info.WorkDir,
+		info.ConfigFile,
+		info.Content,
 		func() {
-			a.pages.RemovePage("confirm_apply")
-			a.executor.ExecuteApply(path)
+			a.pages.RemovePage("confirm_tf")
+			a.executeTerraformCommand("Apply", info.WorkDir, info.Command)
 		},
 		func() {
-			a.pages.RemovePage("confirm_apply")
+			a.pages.RemovePage("confirm_tf")
 			a.tviewApp.SetFocus(a.treeView)
 		},
 	)
 
-	a.pages.AddPage("confirm_apply", confirmDialog, true, true)
+	a.pages.AddPage("confirm_tf", confirmDialog, true, true)
+	if form := confirmDialog.GetForm(); form != nil {
+		a.tviewApp.SetFocus(form)
+	}
+}
+
+// showDestroyConfirmation shows confirmation dialog for terraform destroy
+func (a *AppNew) showDestroyConfirmation(path string) {
+	info := components.GetTerraformCommandInfo(path, a.config.Commands.DestroyTemplate, a.config.Commands.TfvarsFile, a.config)
+	
+	confirmDialog := dialog.NewTerraformConfirmDialog(
+		"terraform destroy",
+		info.WorkDir,
+		info.ConfigFile,
+		info.Content,
+		func() {
+			a.pages.RemovePage("confirm_tf")
+			a.executeTerraformCommand("Destroy", info.WorkDir, info.Command)
+		},
+		func() {
+			a.pages.RemovePage("confirm_tf")
+			a.tviewApp.SetFocus(a.treeView)
+		},
+	)
+
+	a.pages.AddPage("confirm_tf", confirmDialog, true, true)
+	if form := confirmDialog.GetForm(); form != nil {
+		a.tviewApp.SetFocus(form)
+	}
+}
+
+// executeTerraformCommand executes a terraform command
+func (a *AppNew) executeTerraformCommand(action, workDir, cmdStr string) {
+	a.contentView.Clear()
+	a.contentView.SetTitle(fmt.Sprintf(" 🚀 Terraform %s ", action))
+	fmt.Fprintf(a.contentView, "[yellow]Executing Terraform %s[white]\n", action)
+	fmt.Fprintf(a.contentView, "[cyan]Directory:[white] %s\n", workDir)
+	fmt.Fprintf(a.contentView, "[cyan]Command:[white] %s\n", cmdStr)
+	fmt.Fprintf(a.contentView, "[cyan]%s[white]\n\n", strings.Repeat("─", 60))
+
+	go func() {
+		parts := strings.Fields(cmdStr)
+		if len(parts) == 0 {
+			return
+		}
+		
+		cmd := exec.Command(parts[0], parts[1:]...)
+		cmd.Dir = workDir
+		
+		output, err := cmd.CombinedOutput()
+		
+		a.tviewApp.QueueUpdateDraw(func() {
+			if err != nil {
+				fmt.Fprintf(a.contentView, "[red]Error:[white] %v\n\n", err)
+			}
+			a.contentView.AppendText(string(output))
+			a.contentView.AppendText("\n\n[green]Done.[white]")
+		})
+	}()
 }
 
 // showHelp displays the help screen
