@@ -1,0 +1,9 @@
+# Output directory for generated files
+output/
+
+# Terraform files
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+*.tfplan
