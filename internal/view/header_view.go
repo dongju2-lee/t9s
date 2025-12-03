@@ -51,7 +51,7 @@ func (hv *HeaderView) buildHeader() {
 	fmt.Fprintf(infoText, "[cyan]Context:[white]  %s\n", workspace)
 	fmt.Fprintf(infoText, "[cyan]Path:[white]     %s\n", hv.currentDir)
 	fmt.Fprintf(infoText, "[cyan]User:[white]     %s@%s\n", user, host)
-	fmt.Fprintf(infoText, "[cyan]Version:[white]  v0.2.0\n")
+	fmt.Fprintf(infoText, "[cyan]Version:[white]  v0.2.2\n")
 
 	// Shortcuts section
 	shortcuts := tview.NewTextView().

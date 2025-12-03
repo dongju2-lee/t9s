@@ -23,6 +23,7 @@ type App struct {
 	currentDir  string
 	currentFile string
 	config      *config.Config
+	focusOnTree bool // true if tree is focused, false if content is focused
 }
 
 // NewApp creates a new T9s application
@@ -70,6 +71,7 @@ func NewApp() *App {
 		currentDir: currentDir,
 		config:     cfg,
 		pages:      tview.NewPages(),
+		focusOnTree: true, // Start with tree focused
 	}
 
 	app.setupUI()
@@ -301,7 +303,7 @@ func (a *App) createStatusBar() *tview.TextView {
 	statusBar.SetTextColor(tcell.ColorWhite)
 
 	// Simple one-line status bar
-	fmt.Fprintf(statusBar, "[yellow]<↑↓>[white] Navigate  [yellow]<Enter>[white] Expand/View  [yellow]<q>[white] Quit")
+	fmt.Fprintf(statusBar, "[green]● File Tree[white]  [yellow]|[white]  [yellow]Tab[white] Switch Focus  [yellow]|[white]  [yellow]↑↓[white] Navigate  [yellow]Enter[white] Expand/View  [yellow]q[white] Quit")
 
 	return statusBar
 }
@@ -336,9 +338,14 @@ func (a *App) displayFile(path string) {
 func (a *App) updateStatusBar(path string) {
 	relPath, _ := filepath.Rel(a.currentDir, path)
 	a.statusBar.Clear()
-	fmt.Fprintf(a.statusBar, "[cyan]═══════════════════════════════════════════════════════════════════\n")
-	fmt.Fprintf(a.statusBar, "[yellow]Current:[white] %s  [yellow]|[white]  [yellow]h[white] History  [yellow]H[white] Helm  [yellow]e[white] Edit  [yellow]q[white] Quit\n", relPath)
-	fmt.Fprintf(a.statusBar, "[cyan]═══════════════════════════════════════════════════════════════════")
+	
+	// Determine focus indicator
+	focusIndicator := "[green]● File Tree[white]"
+	if !a.focusOnTree {
+		focusIndicator = "[green]● Content View[white]"
+	}
+	
+	fmt.Fprintf(a.statusBar, "[yellow]Current:[white] %s  [yellow]|[white]  %s  [yellow]|[white]  [yellow]Tab[white] Switch Focus  [yellow]|[white]  [yellow]h[white] History  [yellow]e[white] Edit  [yellow]q[white] Quit", relPath, focusIndicator)
 }
 
 // setupKeyBindings sets up global key bindings
@@ -353,6 +360,17 @@ func (a *App) setupKeyBindings() {
 		}
 
 		switch event.Key() {
+		case tcell.KeyTab:
+			// Toggle focus between tree and content view
+			a.focusOnTree = !a.focusOnTree
+			if a.focusOnTree {
+				a.tviewApp.SetFocus(a.tree)
+				a.updateStatusBar("Focus: File Tree")
+			} else {
+				a.tviewApp.SetFocus(a.contentView)
+				a.updateStatusBar("Focus: Content View")
+			}
+			return nil
 		case tcell.KeyCtrlC:
 			a.tviewApp.Stop()
 			return nil
@@ -475,6 +493,7 @@ func (a *App) showApply() {
 				a.runTerraformCommand("Apply", a.config.Commands.ApplyTemplate)
 			} else {
 				// Focus back to tree if cancelled
+				a.focusOnTree = true
 				a.tviewApp.SetFocus(a.tree)
 			}
 		})
@@ -626,6 +645,7 @@ func (a *App) showSettings() {
 					a.setupUI()
 				}
 				a.pages.SwitchToPage("main")
+				a.focusOnTree = true
 				a.tviewApp.SetFocus(a.tree)
 			}
 		}).
@@ -636,6 +656,7 @@ func (a *App) showSettings() {
 				a.config = cfg
 			}
 			a.pages.SwitchToPage("main")
+			a.focusOnTree = true
 			a.tviewApp.SetFocus(a.tree)
 		})
 

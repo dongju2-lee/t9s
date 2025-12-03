@@ -40,6 +40,7 @@ type AppNew struct {
 	currentDir  string
 	currentFile string
 	config      *config.Config
+	focusOnTree bool // true if tree is focused, false if content is focused
 }
 
 // NewAppNew creates a new T9s application with improved structure
@@ -95,6 +96,7 @@ func NewAppNew() *AppNew {
 		config:     cfg,
 		pages:      tview.NewPages(),
 		historyDB:  historyDB,
+		focusOnTree: true, // Start with tree focused
 	}
 
 	app.setupViews()
@@ -166,6 +168,17 @@ func (a *AppNew) setupKeyBindings() {
 		}
 		
 		switch event.Key() {
+		case tcell.KeyTab:
+			// Toggle focus between tree and content view
+			a.focusOnTree = !a.focusOnTree
+			if a.focusOnTree {
+				a.tviewApp.SetFocus(a.treeView)
+				a.statusBar.SetFocusIndicator("File Tree")
+			} else {
+				a.tviewApp.SetFocus(a.contentView)
+				a.statusBar.SetFocusIndicator("Content View")
+			}
+			return nil
 		case tcell.KeyCtrlC:
 			a.tviewApp.Stop()
 			return nil
