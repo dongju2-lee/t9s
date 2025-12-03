@@ -65,13 +65,26 @@ func (h *HistoryDB) init() error {
 		config_file TEXT,
 		config_data TEXT,
 		success INTEGER NOT NULL,
-		error_msg TEXT,
-		INDEX idx_directory (directory),
-		INDEX idx_timestamp (timestamp)
+		error_msg TEXT
 	);
 	`
-	_, err := h.db.Exec(query)
-	return err
+	if _, err := h.db.Exec(query); err != nil {
+		return err
+	}
+
+	// Create indexes separately
+	indexes := []string{
+		`CREATE INDEX IF NOT EXISTS idx_directory ON history(directory)`,
+		`CREATE INDEX IF NOT EXISTS idx_timestamp ON history(timestamp)`,
+	}
+
+	for _, idx := range indexes {
+		if _, err := h.db.Exec(idx); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // AddEntry adds a new history entry

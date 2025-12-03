@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -315,9 +316,48 @@ func (a *AppNew) rebuildMainPage() {
 	a.pages.AddPage("main", mainPage, true, true)
 }
 
-// showInitConfirmation shows confirmation dialog for terraform init
+// showInitConfirmation shows file selection for init config
 func (a *AppNew) showInitConfirmation(path string) {
-	info := components.GetTerraformCommandInfo(path, a.config.Commands.InitTemplate, a.config.Commands.InitConfFile, a.config)
+	// Get directory path
+	info, err := os.Stat(path)
+	workDir := path
+	if err == nil && !info.IsDir() {
+		workDir = filepath.Dir(path)
+	}
+
+	// Check if config directory exists
+	configDir := filepath.Join(workDir, "config")
+	if _, err := os.Stat(configDir); os.IsNotExist(err) {
+		// No config directory, use default
+		a.showInitConfirmationWithFile(path, "")
+		return
+	}
+
+	// Show file selection dialog
+	fileDialog := dialog.NewFileSelectionDialog(
+		configDir,
+		"*.conf",
+		"Select Init Config File",
+		func(filePath, content string) {
+			// File selected, show confirmation
+			a.pages.RemovePage("file_selection")
+			a.showInitConfirmationWithFile(path, filePath)
+		},
+		func() {
+			// Cancelled
+			a.pages.RemovePage("file_selection")
+			a.focusOnTree = true
+			a.tviewApp.SetFocus(a.treeView)
+		},
+	)
+
+	a.pages.AddPage("file_selection", fileDialog, true, true)
+	a.tviewApp.SetFocus(fileDialog.GetList())
+}
+
+// showInitConfirmationWithFile shows confirmation dialog with selected file
+func (a *AppNew) showInitConfirmationWithFile(path, configFile string) {
+	info := components.GetTerraformCommandInfo(path, a.config.Commands.InitTemplate, configFile, a.config)
 	
 	confirmDialog := dialog.NewTerraformConfirmDialog(
 		"terraform init",
@@ -330,6 +370,7 @@ func (a *AppNew) showInitConfirmation(path string) {
 		},
 		func() {
 			a.pages.RemovePage("confirm_tf")
+			a.focusOnTree = true
 			a.tviewApp.SetFocus(a.treeView)
 		},
 	)
@@ -340,9 +381,48 @@ func (a *AppNew) showInitConfirmation(path string) {
 	}
 }
 
-// showPlanConfirmation shows confirmation dialog for terraform plan
+// showPlanConfirmation shows file selection for plan tfvars
 func (a *AppNew) showPlanConfirmation(path string) {
-	info := components.GetTerraformCommandInfo(path, a.config.Commands.PlanTemplate, a.config.Commands.TfvarsFile, a.config)
+	// Get directory path
+	info, err := os.Stat(path)
+	workDir := path
+	if err == nil && !info.IsDir() {
+		workDir = filepath.Dir(path)
+	}
+
+	// Check if config directory exists
+	configDir := filepath.Join(workDir, "config")
+	if _, err := os.Stat(configDir); os.IsNotExist(err) {
+		// No config directory, use default
+		a.showPlanConfirmationWithFile(path, "")
+		return
+	}
+
+	// Show file selection dialog
+	fileDialog := dialog.NewFileSelectionDialog(
+		configDir,
+		"*.tfvars",
+		"Select Terraform Variables File for Plan",
+		func(filePath, content string) {
+			// File selected, show confirmation
+			a.pages.RemovePage("file_selection")
+			a.showPlanConfirmationWithFile(path, filePath)
+		},
+		func() {
+			// Cancelled
+			a.pages.RemovePage("file_selection")
+			a.focusOnTree = true
+			a.tviewApp.SetFocus(a.treeView)
+		},
+	)
+
+	a.pages.AddPage("file_selection", fileDialog, true, true)
+	a.tviewApp.SetFocus(fileDialog.GetList())
+}
+
+// showPlanConfirmationWithFile shows confirmation dialog with selected file
+func (a *AppNew) showPlanConfirmationWithFile(path, configFile string) {
+	info := components.GetTerraformCommandInfo(path, a.config.Commands.PlanTemplate, configFile, a.config)
 	
 	confirmDialog := dialog.NewTerraformConfirmDialog(
 		"terraform plan",
@@ -355,6 +435,7 @@ func (a *AppNew) showPlanConfirmation(path string) {
 		},
 		func() {
 			a.pages.RemovePage("confirm_tf")
+			a.focusOnTree = true
 			a.tviewApp.SetFocus(a.treeView)
 		},
 	)
@@ -365,14 +446,66 @@ func (a *AppNew) showPlanConfirmation(path string) {
 	}
 }
 
-// showApplyConfirmation shows confirmation dialog for terraform apply
+// showApplyConfirmation shows file selection for apply tfvars
 func (a *AppNew) showApplyConfirmation() {
 	path := a.treeView.GetCurrentPath()
 	if path == "" {
 		return
 	}
 
-	info := components.GetTerraformCommandInfo(path, a.config.Commands.ApplyTemplate, a.config.Commands.TfvarsFile, a.config)
+	// Get directory path
+	info, err := os.Stat(path)
+	workDir := path
+	if err == nil && !info.IsDir() {
+		workDir = filepath.Dir(path)
+	}
+
+	// Check if config directory exists
+	configDir := filepath.Join(workDir, "config")
+	
+	// DEBUG LOGGING
+	f, _ := os.OpenFile("/tmp/t9s_debug.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if f != nil {
+		fmt.Fprintf(f, "Apply Path: %s\nWorkDir: %s\nConfigDir: %s\n", path, workDir, configDir)
+		if _, err := os.Stat(configDir); os.IsNotExist(err) {
+			fmt.Fprintf(f, "ConfigDir does NOT exist: %v\n", err)
+		} else {
+			fmt.Fprintf(f, "ConfigDir exists\n")
+		}
+		f.Close()
+	}
+
+	if _, err := os.Stat(configDir); os.IsNotExist(err) {
+		// No config directory, use default
+		a.showApplyConfirmationWithFile(path, "")
+		return
+	}
+
+	// Show file selection dialog
+	fileDialog := dialog.NewFileSelectionDialog(
+		configDir,
+		"*.tfvars",
+		"Select Terraform Variables File for Apply",
+		func(filePath, content string) {
+			// File selected, show confirmation
+			a.pages.RemovePage("file_selection")
+			a.showApplyConfirmationWithFile(path, filePath)
+		},
+		func() {
+			// Cancelled
+			a.pages.RemovePage("file_selection")
+			a.focusOnTree = true
+			a.tviewApp.SetFocus(a.treeView)
+		},
+	)
+
+	a.pages.AddPage("file_selection", fileDialog, true, true)
+	a.tviewApp.SetFocus(fileDialog.GetList())
+}
+
+// showApplyConfirmationWithFile shows confirmation dialog with selected file
+func (a *AppNew) showApplyConfirmationWithFile(path, configFile string) {
+	info := components.GetTerraformCommandInfo(path, a.config.Commands.ApplyTemplate, configFile, a.config)
 	
 	confirmDialog := dialog.NewTerraformConfirmDialog(
 		"terraform apply",
@@ -385,6 +518,7 @@ func (a *AppNew) showApplyConfirmation() {
 		},
 		func() {
 			a.pages.RemovePage("confirm_tf")
+			a.focusOnTree = true
 			a.tviewApp.SetFocus(a.treeView)
 		},
 	)
@@ -395,9 +529,48 @@ func (a *AppNew) showApplyConfirmation() {
 	}
 }
 
-// showDestroyConfirmation shows confirmation dialog for terraform destroy
+// showDestroyConfirmation shows file selection for destroy tfvars
 func (a *AppNew) showDestroyConfirmation(path string) {
-	info := components.GetTerraformCommandInfo(path, a.config.Commands.DestroyTemplate, a.config.Commands.TfvarsFile, a.config)
+	// Get directory path
+	info, err := os.Stat(path)
+	workDir := path
+	if err == nil && !info.IsDir() {
+		workDir = filepath.Dir(path)
+	}
+
+	// Check if config directory exists
+	configDir := filepath.Join(workDir, "config")
+	if _, err := os.Stat(configDir); os.IsNotExist(err) {
+		// No config directory, use default
+		a.showDestroyConfirmationWithFile(path, "")
+		return
+	}
+
+	// Show file selection dialog
+	fileDialog := dialog.NewFileSelectionDialog(
+		configDir,
+		"*.tfvars",
+		"Select Terraform Variables File for Destroy",
+		func(filePath, content string) {
+			// File selected, show confirmation
+			a.pages.RemovePage("file_selection")
+			a.showDestroyConfirmationWithFile(path, filePath)
+		},
+		func() {
+			// Cancelled
+			a.pages.RemovePage("file_selection")
+			a.focusOnTree = true
+			a.tviewApp.SetFocus(a.treeView)
+		},
+	)
+
+	a.pages.AddPage("file_selection", fileDialog, true, true)
+	a.tviewApp.SetFocus(fileDialog.GetList())
+}
+
+// showDestroyConfirmationWithFile shows confirmation dialog with selected file
+func (a *AppNew) showDestroyConfirmationWithFile(path, configFile string) {
+	info := components.GetTerraformCommandInfo(path, a.config.Commands.DestroyTemplate, configFile, a.config)
 	
 	confirmDialog := dialog.NewTerraformConfirmDialog(
 		"terraform destroy",
@@ -410,6 +583,7 @@ func (a *AppNew) showDestroyConfirmation(path string) {
 		},
 		func() {
 			a.pages.RemovePage("confirm_tf")
+			a.focusOnTree = true
 			a.tviewApp.SetFocus(a.treeView)
 		},
 	)
@@ -437,9 +611,30 @@ func (a *AppNew) executeTerraformCommand(action, workDir, cmdStr string) {
 		
 		cmd := exec.Command(parts[0], parts[1:]...)
 		cmd.Dir = workDir
+
+		// Add -auto-approve for Apply and Destroy if not present
+		if action == "Apply" || action == "Destroy" {
+			hasAutoApprove := false
+			for _, arg := range cmd.Args {
+				if arg == "-auto-approve" {
+					hasAutoApprove = true
+					break
+				}
+			}
+			if !hasAutoApprove {
+				cmd.Args = append(cmd.Args, "-auto-approve")
+				fmt.Fprintf(a.contentView, "[gray](Added -auto-approve flag)[white]\n")
+			}
+		}
+		
+		// Capture output
+		outputBuf := new(bytes.Buffer)
+		cmd.Stdout = outputBuf
+		cmd.Stderr = outputBuf
 		
 		startTime := time.Now()
-		output, err := cmd.CombinedOutput()
+		err := cmd.Run()
+		output := outputBuf.Bytes()
 		
 		// Save to history if it's apply or destroy
 		if (action == "Apply" || action == "Destroy") && a.historyDB != nil {
@@ -485,12 +680,17 @@ func (a *AppNew) executeTerraformCommand(action, workDir, cmdStr string) {
 			if err != nil {
 				fmt.Fprintf(a.contentView, "[red]Error:[white] %v\n\n", err)
 			}
-			a.contentView.AppendText(string(output))
+			
+			// Use ANSIWriter to handle escape codes
+			w := tview.ANSIWriter(a.contentView)
+			w.Write(output)
+
 			a.contentView.AppendText("\n\n[green]Done.[white]")
 			
 			// Show saved to history message
 			if action == "Apply" || action == "Destroy" {
 				a.contentView.AppendText("\n[gray](Saved to history)[white]")
+
 			}
 		})
 	}()

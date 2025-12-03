@@ -34,10 +34,16 @@ func GetTerraformCommandInfo(path string, template string, configFileName string
 	}
 
 	// Find config file if not already set
-	if info.ConfigFile == "" {
-		configPath := filepath.Join(info.WorkDir, configFileName)
-		if _, err := os.Stat(configPath); err == nil {
-			info.ConfigFile = configPath
+	if info.ConfigFile == "" && configFileName != "" {
+		if filepath.IsAbs(configFileName) {
+			if _, err := os.Stat(configFileName); err == nil {
+				info.ConfigFile = configFileName
+			}
+		} else {
+			configPath := filepath.Join(info.WorkDir, configFileName)
+			if _, err := os.Stat(configPath); err == nil {
+				info.ConfigFile = configPath
+			}
 		}
 	}
 

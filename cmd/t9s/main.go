@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	appVersion = "0.2.2"
+	appVersion = "0.2.3"
 	appName    = "T9s"
 )
 
