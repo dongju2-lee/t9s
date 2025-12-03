@@ -29,6 +29,61 @@ func NewContentView() *ContentView {
 	cv.SetTitle(" 📄 Content ")
 	cv.SetBorder(true)
 
+	// Set up custom input capture for fast scrolling
+	cv.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		row, col := cv.GetScrollOffset()
+		switch event.Key() {
+		case tcell.KeyUp:
+			if event.Modifiers()&tcell.ModShift != 0 || event.Modifiers()&tcell.ModCtrl != 0 {
+				// Fast scroll up (10 lines)
+				newRow := row - 10
+				if newRow < 0 {
+					newRow = 0
+				}
+				cv.ScrollTo(newRow, col)
+				return nil
+			}
+		case tcell.KeyDown:
+			if event.Modifiers()&tcell.ModShift != 0 || event.Modifiers()&tcell.ModCtrl != 0 {
+				// Fast scroll down (10 lines)
+				cv.ScrollTo(row+10, col)
+				return nil
+			}
+		case tcell.KeyPgUp:
+			// Scroll up by page (approx 20 lines)
+			newRow := row - 20
+			if newRow < 0 {
+				newRow = 0
+			}
+			cv.ScrollTo(newRow, col)
+			return nil
+		case tcell.KeyPgDn:
+			// Scroll down by page
+			cv.ScrollTo(row+20, col)
+			return nil
+		case tcell.KeyHome:
+			cv.ScrollToBeginning()
+			return nil
+		case tcell.KeyEnd:
+			cv.ScrollToEnd()
+			return nil
+		case tcell.KeyRune:
+			switch event.Rune() {
+			case 'u', 'U': // Fast scroll up
+				newRow := row - 10
+				if newRow < 0 {
+					newRow = 0
+				}
+				cv.ScrollTo(newRow, col)
+				return nil
+			case 'd', 'D': // Fast scroll down
+				cv.ScrollTo(row+10, col)
+				return nil
+			}
+		}
+		return event
+	})
+
 	cv.ShowWelcome()
 
 	return cv

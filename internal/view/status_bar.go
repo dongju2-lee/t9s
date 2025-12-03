@@ -32,14 +32,26 @@ func NewStatusBar(currentDir string) *StatusBar {
 // ShowDefault shows the default status message
 func (sb *StatusBar) ShowDefault() {
 	sb.Clear()
-	fmt.Fprintf(sb, "[green]● %s[white]  [yellow]|[white]  [yellow]Tab[white] Switch Focus  [yellow]|[white]  [yellow]↑↓[white] Navigate  [yellow]Enter[white] Expand/View  [yellow]q[white] Quit", sb.focusIndicator)
+	
+	helpText := "[yellow]↑↓[white] Navigate  [yellow]Enter[white] Expand/View"
+	if sb.focusIndicator == "Content View" {
+		helpText = "[yellow]↑↓[white] Scroll  [yellow]u/d[white] Fast Scroll"
+	}
+	
+	fmt.Fprintf(sb, "[green]● %s[white]  [yellow]|[white]  [yellow]Tab[white] Switch Focus  [yellow]|[white]  %s  [yellow]q[white] Quit", sb.focusIndicator, helpText)
 }
 
 // UpdatePath updates the status bar with current path
 func (sb *StatusBar) UpdatePath(path string) {
 	relPath, _ := filepath.Rel(sb.currentDir, path)
 	sb.Clear()
-	fmt.Fprintf(sb, "[yellow]Current:[white] %s  [yellow]|[white]  [green]● %s[white]  [yellow]|[white]  [yellow]Tab[white] Switch Focus  [yellow]|[white]  [yellow]h[white] History  [yellow]e[white] Edit  [yellow]q[white] Quit", relPath, sb.focusIndicator)
+	
+	helpText := "[yellow]h[white] History  [yellow]e[white] Edit"
+	if sb.focusIndicator == "Content View" {
+		helpText = "[yellow]u/d[white] Fast Scroll"
+	}
+	
+	fmt.Fprintf(sb, "[yellow]Current:[white] %s  [yellow]|[white]  [green]● %s[white]  [yellow]|[white]  [yellow]Tab[white] Switch Focus  [yellow]|[white]  %s  [yellow]q[white] Quit", relPath, sb.focusIndicator, helpText)
 }
 
 // ShowMessage displays a message in the status bar

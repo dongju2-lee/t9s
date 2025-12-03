@@ -238,6 +238,10 @@ func (a *AppNew) setupKeyBindings() {
 				a.showApplyConfirmation()
 				return nil
 			case 'd', 'D':
+				// If focus is on content view, let it handle 'd' (scroll down)
+				if !a.focusOnTree {
+					return event
+				}
 				// d: Terraform destroy
 				path := a.treeView.GetCurrentPath()
 				if path != "" {
@@ -759,6 +763,14 @@ func (a *AppNew) showHistory(path string) {
 			case 'M':
 				// Shift+M: Toggle details
 				a.historyView.ToggleDetails()
+				return nil
+			case 'd', 'D':
+				// d: Load more
+				a.historyView.LoadMore()
+				return nil
+			case 'u', 'U':
+				// u: Load less (go back)
+				a.historyView.LoadLess()
 				return nil
 			}
 		case tcell.KeyDown:

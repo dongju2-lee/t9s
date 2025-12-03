@@ -54,8 +54,8 @@ func (hv *HistoryView) render() {
 	} else {
 		fmt.Fprintf(hv.TextView, "[green]<Shift+M>[white] Hide Details  ")
 	}
-	fmt.Fprintf(hv.TextView, "[green]<Shift+↓>[white] Load More  ")
-	fmt.Fprintf(hv.TextView, "[green]<Shift+↑>[white] Load Less  ")
+	fmt.Fprintf(hv.TextView, "[green]<d>[white] Load More  ")
+	fmt.Fprintf(hv.TextView, "[green]<u>[white] Load Less  ")
 	fmt.Fprintf(hv.TextView, "[green]<Esc>[white] Back\n")
 	fmt.Fprintf(hv.TextView, "[cyan]%s[white]\n\n", strings.Repeat("─", 60))
 
@@ -83,7 +83,7 @@ func (hv *HistoryView) render() {
 	fmt.Fprintf(hv.TextView, "\n[cyan]%s[white]\n", strings.Repeat("─", 60))
 	
 	if displayEnd < len(hv.entries) {
-		fmt.Fprintf(hv.TextView, "[gray]%d more entries available (Press Shift+↓)[white]\n", 
+		fmt.Fprintf(hv.TextView, "[gray]%d more entries available (Press d)[white]\n", 
 			len(hv.entries)-displayEnd)
 	} else if len(hv.entries) > hv.displaySize {
 		fmt.Fprintf(hv.TextView, "[gray]End of history[white]\n")
