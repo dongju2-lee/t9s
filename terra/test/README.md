@@ -67,10 +67,10 @@ Test with different configurations:
 - `monitoring/config/prod.tfvars` - Production
 - `monitoring/config/staging.tfvars` - Staging (no alerts)
 
-### Scenario 2: Tab Focus Switching
+### Scenario 2: Tab Focus Switching & Fast Scrolling
 1. Apply to generate output
 2. Press `Tab` to switch to Content View
-3. Use arrow keys to scroll through output
+3. Use `u` / `d` or `Shift+↑/↓` to scroll fast through output
 4. Press `Tab` again to return to File Tree
 
 ### Scenario 3: History Tracking
