@@ -16,6 +16,8 @@ type HistoryEntry struct {
 	Directory   string
 	Action      string // "apply", "destroy"
 	Timestamp   time.Time
+	User        string // user who executed the command
+	Branch      string // git branch at the time of execution
 	ConfigFile  string // tfvars file used
 	ConfigData  string // content of tfvars at that time
 	Success     bool
@@ -62,6 +64,8 @@ func (h *HistoryDB) init() error {
 		directory TEXT NOT NULL,
 		action TEXT NOT NULL,
 		timestamp DATETIME NOT NULL,
+		user TEXT,
+		branch TEXT,
 		config_file TEXT,
 		config_data TEXT,
 		success INTEGER NOT NULL,
@@ -71,6 +75,10 @@ func (h *HistoryDB) init() error {
 	if _, err := h.db.Exec(query); err != nil {
 		return err
 	}
+
+	// Add new columns if they don't exist (migration)
+	h.db.Exec(`ALTER TABLE history ADD COLUMN user TEXT`)
+	h.db.Exec(`ALTER TABLE history ADD COLUMN branch TEXT`)
 
 	// Create indexes separately
 	indexes := []string{
@@ -90,13 +98,15 @@ func (h *HistoryDB) init() error {
 // AddEntry adds a new history entry
 func (h *HistoryDB) AddEntry(entry *HistoryEntry) error {
 	query := `
-	INSERT INTO history (directory, action, timestamp, config_file, config_data, success, error_msg)
-	VALUES (?, ?, ?, ?, ?, ?, ?)
+	INSERT INTO history (directory, action, timestamp, user, branch, config_file, config_data, success, error_msg)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 	result, err := h.db.Exec(query,
 		entry.Directory,
 		entry.Action,
 		entry.Timestamp,
+		entry.User,
+		entry.Branch,
 		entry.ConfigFile,
 		entry.ConfigData,
 		entry.Success,
@@ -117,7 +127,10 @@ func (h *HistoryDB) AddEntry(entry *HistoryEntry) error {
 // GetByDirectory retrieves history entries for a specific directory
 func (h *HistoryDB) GetByDirectory(directory string, limit int) ([]*HistoryEntry, error) {
 	query := `
-	SELECT id, directory, action, timestamp, config_file, config_data, success, error_msg
+	SELECT id, directory, action, timestamp, 
+	       COALESCE(user, '') as user, 
+	       COALESCE(branch, '') as branch,
+	       config_file, config_data, success, error_msg
 	FROM history
 	WHERE directory = ?
 	ORDER BY timestamp DESC
@@ -138,6 +151,8 @@ func (h *HistoryDB) GetByDirectory(directory string, limit int) ([]*HistoryEntry
 			&entry.Directory,
 			&entry.Action,
 			&timestamp,
+			&entry.User,
+			&entry.Branch,
 			&entry.ConfigFile,
 			&entry.ConfigData,
 			&entry.Success,
@@ -156,7 +171,10 @@ func (h *HistoryDB) GetByDirectory(directory string, limit int) ([]*HistoryEntry
 // GetRecent retrieves recent history entries across all directories
 func (h *HistoryDB) GetRecent(limit int) ([]*HistoryEntry, error) {
 	query := `
-	SELECT id, directory, action, timestamp, config_file, config_data, success, error_msg
+	SELECT id, directory, action, timestamp,
+	       COALESCE(user, '') as user,
+	       COALESCE(branch, '') as branch,
+	       config_file, config_data, success, error_msg
 	FROM history
 	ORDER BY timestamp DESC
 	LIMIT ?
@@ -176,6 +194,8 @@ func (h *HistoryDB) GetRecent(limit int) ([]*HistoryEntry, error) {
 			&entry.Directory,
 			&entry.Action,
 			&timestamp,
+			&entry.User,
+			&entry.Branch,
 			&entry.ConfigFile,
 			&entry.ConfigData,
 			&entry.Success,

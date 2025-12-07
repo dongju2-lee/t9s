@@ -104,6 +104,15 @@ func (hv *HistoryView) renderEntry(entry *db.HistoryEntry, index int) {
 		statusColor, statusIcon, strings.ToUpper(entry.Action),
 		entry.Timestamp.Format("2006-01-02 15:04:05"))
 
+	// Show user and branch info
+	if entry.User != "" {
+		fmt.Fprintf(hv.TextView, "     [gray]User:[white] %s", entry.User)
+		if entry.Branch != "" {
+			fmt.Fprintf(hv.TextView, "  [gray]Branch:[white] [cyan]%s[white]", entry.Branch)
+		}
+		fmt.Fprintf(hv.TextView, "\n")
+	}
+
 	if entry.ConfigFile != "" {
 		fmt.Fprintf(hv.TextView, "     [gray]Config:[white] %s\n", entry.ConfigFile)
 	}

@@ -687,10 +687,23 @@ func (a *AppNew) executeTerraformCommand(action, workDir, cmdStr string) {
 				}
 			}
 			
+			// Get user and branch info
+			user := os.Getenv("USER")
+			if user == "" {
+				user = "unknown"
+			}
+			
+			branch := ""
+			if status, gitErr := a.gitManager.GetStatus(workDir); gitErr == nil {
+				branch = status.Branch
+			}
+			
 			entry := &db.HistoryEntry{
 				Directory:  workDir,
 				Action:     strings.ToLower(action),
 				Timestamp:  startTime,
+				User:       user,
+				Branch:     branch,
 				ConfigFile: configFile,
 				ConfigData: configData,
 				Success:    err == nil,
