@@ -196,3 +196,4 @@ func (h *HistoryDB) Close() error {
 	return h.db.Close()
 }
 
+

@@ -211,3 +211,4 @@ go test ./internal/view
 - ARCHITECTURE.md - 새로운 아키텍처 상세 설명
 - STRUCTURE.md - 기존 구조 문서
 
+

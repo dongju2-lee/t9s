@@ -131,3 +131,4 @@ func (d *GitDAO) getLastCommit(path string) (string, error) {
 	return string(output), nil
 }
 
+

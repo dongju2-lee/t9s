@@ -81,3 +81,4 @@ func (cv *CommandView) GetCurrentDir() string {
 	return cv.currentDir
 }
 
+
