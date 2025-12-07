@@ -2,7 +2,7 @@
 
 ![T9s Logo](https://img.shields.io/badge/T9s-Terraform%20TUI-blue)
 ![Go Version](https://img.shields.io/badge/go-%3E%3D1.20-00ADD8)
-![Version](https://img.shields.io/badge/version-v0.2.5-green)
+![Version](https://img.shields.io/badge/version-v0.2.7-green)
 
 **T9s**는 k9s에서 영감을 받은 Terraform 인프라 관리를 위한 터미널 UI 도구입니다. 복잡한 Terraform 작업을 직관적인 TUI 환경에서 쉽고 안전하게 수행할 수 있습니다.
 
@@ -119,7 +119,7 @@ defaults:
 - [x] **k9s 스타일 아키텍처 적용** (Model/View/Controller)
 - [x] UI 컴포넌트 분리 (Header, Tree, Content, StatusBar)
 
-### v0.2.5 (Current) - UX 및 기능 강화
+### v0.2.7 (Current) - UX 및 기능 강화
 - [x] **파일 선택 다이얼로그**: Init/Plan/Apply/Destroy 시 설정 파일 선택
 - [x] **ANSI 컬러 지원**: Terraform 출력 컬러 유지
 - [x] **빠른 스크롤**: `u`/`d` 키 및 `Shift+방향키` 지원

@@ -34,6 +34,7 @@ func NewHelpView() *HelpView {
 		{"<esc>", "Back/Clear"},
 		{"</>", "Command Mode"},
 		{"<shift-c>", "Home (Commands)"},
+		{"<shift-b>", "Branch Switch"},
 		{"<q>", "Quit"},
 		{"<ctrl-c>", "Quit"},
 		{"<?>", "Help"},
@@ -43,8 +44,15 @@ func NewHelpView() *HelpView {
 	historySection := hv.createSection("HISTORY VIEW", []HelpItem{
 		{"<h>", "Show History"},
 		{"<shift-m>", "Toggle Details"},
-		{"<shift-↓>", "Load More (3)"},
-		{"<shift-↑>", "Load Less"},
+		{"<d>", "Load More (3)"},
+		{"<u>", "Load Less"},
+	})
+	
+	gitSection := hv.createSection("GIT", []HelpItem{
+		{"<shift-b>", "Branch Switch"},
+		{"Stash", "Stash & Switch"},
+		{"Commit", "Commit & Switch"},
+		{"Force", "Discard & Switch"},
 	})
 
 	navigationSection := hv.createSection("NAVIGATION", []HelpItem{
@@ -74,7 +82,7 @@ func NewHelpView() *HelpView {
 	
 	thirdRow := tview.NewFlex().
 		AddItem(historySection, 0, 1, false).
-		AddItem(tview.NewBox().SetBackgroundColor(tcell.ColorBlack), 0, 1, false)
+		AddItem(gitSection, 0, 1, false)
 	thirdRow.SetBackgroundColor(tcell.ColorBlack)
 
 	hv.SetDirection(tview.FlexRow).

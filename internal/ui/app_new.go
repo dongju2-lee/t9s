@@ -14,6 +14,7 @@ import (
 	"github.com/rivo/tview"
 	"github.com/idongju/t9s/internal/config"
 	"github.com/idongju/t9s/internal/db"
+	"github.com/idongju/t9s/internal/git"
 	"github.com/idongju/t9s/internal/ui/components"
 	"github.com/idongju/t9s/internal/ui/dialog"
 	"github.com/idongju/t9s/internal/view"
@@ -36,6 +37,7 @@ type AppNew struct {
 	// Components
 	executor    *components.CommandExecutor
 	historyDB   *db.HistoryDB
+	gitManager  *git.Manager
 	
 	// State
 	currentDir  string
@@ -91,11 +93,15 @@ func NewAppNew() *AppNew {
 		fmt.Fprintf(os.Stderr, "Warning: Failed to initialize history DB: %v\n", err)
 	}
 
+	// Initialize git manager
+	gitManager := git.NewManager()
+
 	app := &AppNew{
 		tviewApp:   tview.NewApplication(),
 		currentDir: currentDir,
 		config:     cfg,
 		pages:      tview.NewPages(),
+		gitManager: gitManager,
 		historyDB:  historyDB,
 		focusOnTree: true, // Start with tree focused
 	}
@@ -110,6 +116,12 @@ func NewAppNew() *AppNew {
 func (a *AppNew) setupViews() {
 	// Create views
 	a.headerView = view.NewHeaderView(a.currentDir)
+	
+	// Update git branch info in header
+	if status, err := a.gitManager.GetStatus(a.currentDir); err == nil {
+		a.headerView.SetGitBranch(status.Branch, status.IsDirty)
+	}
+	
 	a.treeView = view.NewTreeView(a.currentDir)
 	a.contentView = view.NewContentView()
 	a.statusBar = view.NewStatusBar(a.currentDir)
@@ -148,7 +160,7 @@ func (a *AppNew) setupViews() {
 	// Root layout
 	mainPage := tview.NewFlex().
 		SetDirection(tview.FlexRow).
-		AddItem(a.headerView, 6, 0, false).
+		AddItem(a.headerView, 7, 0, false).
 		AddItem(mainFlex, 0, 1, true).
 		AddItem(a.statusBar, 1, 0, false)
 	mainPage.SetBackgroundColor(tcell.ColorBlack)
@@ -212,6 +224,13 @@ func (a *AppNew) setupKeyBindings() {
 			case 'C':
 				// Shift+C: Show available commands
 				a.contentView.ShowWelcome()
+				return nil
+			case 'B':
+				// Shift+B: Branch switch
+				path := a.treeView.GetCurrentPath()
+				if path != "" {
+					a.showBranchSwitch(path)
+				}
 				return nil
 			case 'e', 'E':
 				if a.currentFile != "" {
@@ -277,6 +296,12 @@ func (a *AppNew) showSettings() {
 				
 				// Rebuild header and status bar
 				a.headerView = view.NewHeaderView(a.currentDir)
+				
+				// Update git branch info in header
+				if status, err := a.gitManager.GetStatus(a.currentDir); err == nil {
+					a.headerView.SetGitBranch(status.Branch, status.IsDirty)
+				}
+				
 				a.statusBar = view.NewStatusBar(a.currentDir)
 				
 				// Rebuild main layout
@@ -311,7 +336,7 @@ func (a *AppNew) rebuildMainPage() {
 	// Root layout
 	mainPage := tview.NewFlex().
 		SetDirection(tview.FlexRow).
-		AddItem(a.headerView, 6, 0, false).
+		AddItem(a.headerView, 7, 0, false).
 		AddItem(mainFlex, 0, 1, true).
 		AddItem(a.statusBar, 1, 0, false)
 	mainPage.SetBackgroundColor(tcell.ColorBlack)
@@ -866,6 +891,192 @@ func (a *AppNew) executeCommand(cmd string) {
 			}
 			a.contentView.AppendText(string(output))
 			a.contentView.AppendText("\n\n[green]Done.[white]")
+		})
+	}()
+}
+
+// showBranchSwitch shows branch selection dialog
+func (a *AppNew) showBranchSwitch(path string) {
+	// Get directory path
+	info, err := os.Stat(path)
+	workDir := path
+	if err == nil && !info.IsDir() {
+		workDir = filepath.Dir(path)
+	}
+
+	// Get branches
+	branches, currentBranch, err := a.gitManager.GetBranches(workDir)
+	if err != nil {
+		a.contentView.DisplayText("Error", fmt.Sprintf("[red]Failed to get branches: %v[white]", err))
+		return
+	}
+
+	if len(branches) == 0 {
+		a.contentView.DisplayText("Info", "[yellow]No git branches found in this directory[white]")
+		return
+	}
+
+	// Show branch selection dialog
+	branchDialog := dialog.NewBranchDialog(
+		branches,
+		currentBranch,
+		func(selectedBranch string) {
+			a.pages.RemovePage("branch_select")
+			a.switchBranch(workDir, currentBranch, selectedBranch)
+		},
+		func() {
+			a.pages.RemovePage("branch_select")
+			a.tviewApp.SetFocus(a.treeView)
+		},
+	)
+
+	a.pages.AddPage("branch_select", branchDialog, true, true)
+	a.tviewApp.SetFocus(branchDialog.GetList())
+}
+
+// switchBranch handles branch switching with dirty working tree check
+func (a *AppNew) switchBranch(workDir, currentBranch, targetBranch string) {
+	// Don't switch if same branch
+	if currentBranch == targetBranch {
+		a.tviewApp.SetFocus(a.treeView)
+		return
+	}
+
+	// Check for local changes
+	status, err := a.gitManager.GetStatus(workDir)
+	if err != nil {
+		a.contentView.DisplayText("Error", fmt.Sprintf("[red]Failed to check git status: %v[white]", err))
+		a.tviewApp.SetFocus(a.treeView)
+		return
+	}
+
+	// If working tree is clean, switch directly
+	if !status.IsDirty {
+		a.performBranchSwitch(workDir, targetBranch, "")
+		return
+	}
+
+	// Show dirty working tree dialog
+	dirtyDialog := dialog.NewDirtyBranchDialog(
+		currentBranch,
+		targetBranch,
+		status.ModifiedFiles,
+		func() {
+			// Stash & Switch
+			a.pages.RemovePage("dirty_branch")
+			a.performBranchSwitch(workDir, targetBranch, "stash")
+		},
+		func() {
+			// Commit & Switch
+			a.pages.RemovePage("dirty_branch")
+			a.showCommitDialog(workDir, targetBranch)
+		},
+		func() {
+			// Force Switch (Discard)
+			a.pages.RemovePage("dirty_branch")
+			a.performBranchSwitch(workDir, targetBranch, "force")
+		},
+		func() {
+			// Cancel
+			a.pages.RemovePage("dirty_branch")
+			a.tviewApp.SetFocus(a.treeView)
+		},
+	)
+
+	a.pages.AddPage("dirty_branch", dirtyDialog, true, true)
+	a.tviewApp.SetFocus(dirtyDialog.GetForm())
+}
+
+// showCommitDialog shows dialog to input commit message
+func (a *AppNew) showCommitDialog(workDir, targetBranch string) {
+	commitDialog := dialog.NewCommitDialog(
+		func(message string) {
+			a.pages.RemovePage("commit_dialog")
+			a.performBranchSwitch(workDir, targetBranch, "commit:"+message)
+		},
+		func() {
+			a.pages.RemovePage("commit_dialog")
+			a.tviewApp.SetFocus(a.treeView)
+		},
+	)
+
+	a.pages.AddPage("commit_dialog", commitDialog, true, true)
+	a.tviewApp.SetFocus(commitDialog.GetForm())
+}
+
+// performBranchSwitch performs the actual branch switch
+func (a *AppNew) performBranchSwitch(workDir, targetBranch, mode string) {
+	a.contentView.Clear()
+	a.contentView.SetTitle(" 🌿 Branch Switch ")
+	
+	fmt.Fprintf(a.contentView, "[yellow]Switching Branch[white]\n")
+	fmt.Fprintf(a.contentView, "[cyan]Directory:[white] %s\n", workDir)
+	fmt.Fprintf(a.contentView, "[cyan]Target Branch:[white] %s\n", targetBranch)
+	fmt.Fprintf(a.contentView, "[cyan]%s[white]\n\n", strings.Repeat("─", 60))
+
+	go func() {
+		var err error
+
+		// Handle different modes
+		if mode == "stash" {
+			a.tviewApp.QueueUpdateDraw(func() {
+				fmt.Fprintf(a.contentView, "[yellow]Stashing changes...[white]\n")
+			})
+			err = a.gitManager.StashChanges(workDir, fmt.Sprintf("T9s: Auto-stash before switching to %s", targetBranch))
+			if err != nil {
+				a.tviewApp.QueueUpdateDraw(func() {
+					fmt.Fprintf(a.contentView, "[red]Failed to stash: %v[white]\n", err)
+				})
+				return
+			}
+			a.tviewApp.QueueUpdateDraw(func() {
+				fmt.Fprintf(a.contentView, "[green]Changes stashed successfully[white]\n\n")
+			})
+		} else if strings.HasPrefix(mode, "commit:") {
+			message := strings.TrimPrefix(mode, "commit:")
+			a.tviewApp.QueueUpdateDraw(func() {
+				fmt.Fprintf(a.contentView, "[yellow]Committing changes...[white]\n")
+			})
+			err = a.gitManager.CommitAll(workDir, message)
+			if err != nil {
+				a.tviewApp.QueueUpdateDraw(func() {
+					fmt.Fprintf(a.contentView, "[red]Failed to commit: %v[white]\n", err)
+				})
+				return
+			}
+			a.tviewApp.QueueUpdateDraw(func() {
+				fmt.Fprintf(a.contentView, "[green]Changes committed successfully[white]\n\n")
+			})
+		} else if mode == "force" {
+			a.tviewApp.QueueUpdateDraw(func() {
+				fmt.Fprintf(a.contentView, "[yellow]Force switching (discarding changes)...[white]\n")
+			})
+			err = a.gitManager.CheckoutBranchForce(workDir, targetBranch)
+		} else {
+			// Clean switch
+			a.tviewApp.QueueUpdateDraw(func() {
+				fmt.Fprintf(a.contentView, "[yellow]Switching branch...[white]\n")
+			})
+			err = a.gitManager.CheckoutBranch(workDir, targetBranch)
+		}
+
+		// Perform checkout for non-force modes
+		if mode != "force" && err == nil {
+			err = a.gitManager.CheckoutBranch(workDir, targetBranch)
+		}
+
+		a.tviewApp.QueueUpdateDraw(func() {
+			if err != nil {
+				fmt.Fprintf(a.contentView, "[red]Failed to switch branch: %v[white]\n", err)
+			} else {
+				fmt.Fprintf(a.contentView, "[green]Successfully switched to branch: %s[white]\n", targetBranch)
+				
+				// Update header with new branch info
+				if status, err := a.gitManager.GetStatus(workDir); err == nil {
+					a.headerView.SetGitBranch(status.Branch, status.IsDirty)
+				}
+			}
+			a.tviewApp.SetFocus(a.treeView)
 		})
 	}()
 }

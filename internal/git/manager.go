@@ -133,3 +133,95 @@ func (m *Manager) GetLastCommit(path string) (string, error) {
 
 	return string(output), nil
 }
+
+// GetBranches gets all local branches
+func (m *Manager) GetBranches(path string) ([]string, string, error) {
+	cmd := exec.Command("git", "branch", "--list")
+	cmd.Dir = path
+
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to get branches: %w", err)
+	}
+
+	var branches []string
+	var currentBranch string
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		// Current branch is marked with *
+		if strings.HasPrefix(line, "*") {
+			currentBranch = strings.TrimSpace(line[1:])
+			branches = append(branches, currentBranch)
+		} else {
+			branches = append(branches, strings.TrimSpace(line))
+		}
+	}
+
+	return branches, currentBranch, nil
+}
+
+// CheckoutBranch switches to a different branch
+func (m *Manager) CheckoutBranch(path, branch string) error {
+	cmd := exec.Command("git", "checkout", branch)
+	cmd.Dir = path
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to checkout branch: %w\nOutput: %s", err, string(output))
+	}
+
+	return nil
+}
+
+// StashChanges stashes current changes
+func (m *Manager) StashChanges(path, message string) error {
+	args := []string{"stash", "push"}
+	if message != "" {
+		args = append(args, "-m", message)
+	}
+
+	cmd := exec.Command("git", args...)
+	cmd.Dir = path
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to stash changes: %w\nOutput: %s", err, string(output))
+	}
+
+	return nil
+}
+
+// CommitAll commits all changes
+func (m *Manager) CommitAll(path, message string) error {
+	// Add all changes
+	addCmd := exec.Command("git", "add", "-A")
+	addCmd.Dir = path
+	if output, err := addCmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to add changes: %w\nOutput: %s", err, string(output))
+	}
+
+	// Commit
+	commitCmd := exec.Command("git", "commit", "-m", message)
+	commitCmd.Dir = path
+	if output, err := commitCmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to commit: %w\nOutput: %s", err, string(output))
+	}
+
+	return nil
+}
+
+// CheckoutBranchForce switches to a different branch, discarding local changes
+func (m *Manager) CheckoutBranchForce(path, branch string) error {
+	cmd := exec.Command("git", "checkout", "-f", branch)
+	cmd.Dir = path
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to force checkout branch: %w\nOutput: %s", err, string(output))
+	}
+
+	return nil
+}

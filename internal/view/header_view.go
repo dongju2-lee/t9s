@@ -15,6 +15,8 @@ type HeaderView struct {
 	*tview.Flex
 	currentDir string
 	workspace  string
+	gitBranch  string
+	gitDirty   bool
 }
 
 // NewHeaderView creates a new header view
@@ -31,6 +33,9 @@ func NewHeaderView(currentDir string) *HeaderView {
 
 // buildHeader builds the header components
 func (hv *HeaderView) buildHeader() {
+	// Clear existing items first
+	hv.Clear()
+	
 	// Info section
 	infoText := tview.NewTextView().
 		SetDynamicColors(true).
@@ -50,8 +55,19 @@ func (hv *HeaderView) buildHeader() {
 
 	fmt.Fprintf(infoText, "[cyan]Context:[white]  %s\n", workspace)
 	fmt.Fprintf(infoText, "[cyan]Path:[white]     %s\n", hv.currentDir)
+	
+	// Show git branch if available
+	if hv.gitBranch != "" {
+		branchDisplay := hv.gitBranch
+		if hv.gitDirty {
+			fmt.Fprintf(infoText, "[cyan]Branch:[white]   %s [red]●[white]\n", branchDisplay)
+		} else {
+			fmt.Fprintf(infoText, "[cyan]Branch:[white]   %s [green]✓[white]\n", branchDisplay)
+		}
+	}
+	
 	fmt.Fprintf(infoText, "[cyan]User:[white]     %s@%s\n", user, host)
-	fmt.Fprintf(infoText, "[cyan]Version:[white]  v0.2.5\n")
+	fmt.Fprintf(infoText, "[cyan]Version:[white]  v0.2.7\n")
 
 	// Shortcuts section
 	shortcuts := tview.NewTextView().
@@ -61,8 +77,8 @@ func (hv *HeaderView) buildHeader() {
 	
 	fmt.Fprintf(shortcuts, "[yellow]<i>[white] Init        [yellow]<p>[white] Plan      [yellow]<a>[white] Apply\n")
 	fmt.Fprintf(shortcuts, "[yellow]<d>[white] Destroy     [yellow]<h>[white] History   [yellow]<e>[white] Edit\n")
-	fmt.Fprintf(shortcuts, "[yellow]<s>[white] Settings    [yellow]<?>[white] Help      [yellow]</>[white] Command\n")
-	fmt.Fprintf(shortcuts, "[yellow]<C>[white] Home        [yellow]<q>[white] Quit")
+	fmt.Fprintf(shortcuts, "[yellow]<s>[white] Settings    [yellow]<B>[white] Branch    [yellow]<?>[white] Help\n")
+	fmt.Fprintf(shortcuts, "[yellow]</>[white] Command     [yellow]<C>[white] Home      [yellow]<q>[white] Quit")
 
 	// Logo
 	logo := tview.NewTextView().
@@ -92,6 +108,19 @@ func (hv *HeaderView) buildHeader() {
 // UpdateWorkspace updates the workspace information
 func (hv *HeaderView) UpdateWorkspace(workspace string) {
 	hv.workspace = workspace
+	hv.buildHeader()
+}
+
+// SetGitBranch updates the git branch information
+func (hv *HeaderView) SetGitBranch(branch string, isDirty bool) {
+	hv.gitBranch = branch
+	hv.gitDirty = isDirty
+	hv.buildHeader()
+}
+
+// UpdatePath updates the current path
+func (hv *HeaderView) UpdatePath(path string) {
+	hv.currentDir = path
 	hv.buildHeader()
 }
 
