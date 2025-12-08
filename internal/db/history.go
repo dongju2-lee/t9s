@@ -12,16 +12,16 @@ import (
 
 // HistoryEntry represents a terraform command execution history
 type HistoryEntry struct {
-	ID          int64
-	Directory   string
-	Action      string // "apply", "destroy"
-	Timestamp   time.Time
-	User        string // user who executed the command
-	Branch      string // git branch at the time of execution
-	ConfigFile  string // tfvars file used
-	ConfigData  string // content of tfvars at that time
-	Success     bool
-	ErrorMsg    string
+	ID         int64
+	Directory  string
+	Action     string // "apply", "destroy"
+	Timestamp  time.Time
+	User       string // user who executed the command
+	Branch     string // git branch at the time of execution
+	ConfigFile string // tfvars file used
+	ConfigData string // content of tfvars at that time
+	Success    bool
+	ErrorMsg   string
 }
 
 // HistoryDB manages terraform execution history
@@ -215,5 +215,3 @@ func (h *HistoryDB) GetRecent(limit int) ([]*HistoryEntry, error) {
 func (h *HistoryDB) Close() error {
 	return h.db.Close()
 }
-
-
