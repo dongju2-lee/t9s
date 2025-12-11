@@ -35,16 +35,16 @@ func NewHeaderView(currentDir string) *HeaderView {
 func (hv *HeaderView) buildHeader() {
 	// Clear existing items first
 	hv.Clear()
-	
+
 	// Info section
 	infoText := tview.NewTextView().
 		SetDynamicColors(true).
 		SetTextAlign(tview.AlignLeft)
 	infoText.SetBackgroundColor(tcell.ColorBlack)
-	
+
 	user := os.Getenv("USER")
 	host, _ := os.Hostname()
-	
+
 	// Get terraform workspace
 	workspace := "default"
 	cmd := exec.Command("terraform", "workspace", "show")
@@ -55,7 +55,7 @@ func (hv *HeaderView) buildHeader() {
 
 	fmt.Fprintf(infoText, "[cyan]Context:[white]  %s\n", workspace)
 	fmt.Fprintf(infoText, "[cyan]Path:[white]     %s\n", hv.currentDir)
-	
+
 	// Show git branch if available
 	if hv.gitBranch != "" {
 		branchDisplay := hv.gitBranch
@@ -65,16 +65,16 @@ func (hv *HeaderView) buildHeader() {
 			fmt.Fprintf(infoText, "[cyan]Branch:[white]   %s [green]✓[white]\n", branchDisplay)
 		}
 	}
-	
+
 	fmt.Fprintf(infoText, "[cyan]User:[white]     %s@%s\n", user, host)
-	fmt.Fprintf(infoText, "[cyan]Version:[white]  v0.2.8\n")
+	fmt.Fprintf(infoText, "[cyan]Version:[white]  v0.2.9\n")
 
 	// Shortcuts section
 	shortcuts := tview.NewTextView().
 		SetDynamicColors(true).
 		SetTextAlign(tview.AlignLeft)
 	shortcuts.SetBackgroundColor(tcell.ColorBlack)
-	
+
 	fmt.Fprintf(shortcuts, "[yellow]<i>[white] Init        [yellow]<p>[white] Plan      [yellow]<a>[white] Apply\n")
 	fmt.Fprintf(shortcuts, "[yellow]<d>[white] Destroy     [yellow]<h>[white] History   [yellow]<e>[white] Edit\n")
 	fmt.Fprintf(shortcuts, "[yellow]<s>[white] Settings    [yellow]<B>[white] Branch    [yellow]<?>[white] Help\n")
@@ -123,4 +123,3 @@ func (hv *HeaderView) UpdatePath(path string) {
 	hv.currentDir = path
 	hv.buildHeader()
 }
-

@@ -14,7 +14,7 @@ type TerraformConfirmDialog struct {
 }
 
 // NewTerraformConfirmDialog creates a new terraform confirmation dialog
-func NewTerraformConfirmDialog(command, workDir, configFile, fileContent string, onConfirm, onCancel func()) *TerraformConfirmDialog {
+func NewTerraformConfirmDialog(command, workDir, configFile, fileContent string, onExecute, onAutoApprove, onCancel func()) *TerraformConfirmDialog {
 	td := &TerraformConfirmDialog{
 		Flex: tview.NewFlex(),
 	}
@@ -51,12 +51,18 @@ func NewTerraformConfirmDialog(command, workDir, configFile, fileContent string,
 		SetTextAlign(tview.AlignCenter)
 	question.SetBackgroundColor(tcell.ColorBlack)
 	fmt.Fprintf(question, "[yellow]Do you want to proceed with this command?[white]\n")
+	fmt.Fprintf(question, "[gray](Execute: manual 'yes' required | Auto Approve: automatic execution)[white]\n")
 
 	// Buttons
 	form := tview.NewForm().
 		AddButton("Execute", func() {
-			if onConfirm != nil {
-				onConfirm()
+			if onExecute != nil {
+				onExecute()
+			}
+		}).
+		AddButton("Auto Approve", func() {
+			if onAutoApprove != nil {
+				onAutoApprove()
 			}
 		}).
 		AddButton("Cancel", func() {

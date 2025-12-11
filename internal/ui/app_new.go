@@ -1,9 +1,10 @@
 package ui
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -393,10 +394,18 @@ func (a *AppNew) showInitConfirmationWithFile(path, configFile string) {
 		info.WorkDir,
 		info.ConfigFile,
 		info.Content,
+		// Execute: normal execution (no auto-approve)
 		func() {
 			a.pages.RemovePage("confirm_tf")
-			a.executeTerraformCommand("Init", info.WorkDir, info.Command)
+			a.executeTerraformCommand("Init", info.WorkDir, info.Command, info.ConfigFile, info.Content)
 		},
+		// Auto Approve: add -auto-approve flag
+		func() {
+			a.pages.RemovePage("confirm_tf")
+			cmdWithAutoApprove := info.Command + " -auto-approve"
+			a.executeTerraformCommand("Init", info.WorkDir, cmdWithAutoApprove, info.ConfigFile, info.Content)
+		},
+		// Cancel
 		func() {
 			a.pages.RemovePage("confirm_tf")
 			a.focusOnTree = true
@@ -458,10 +467,17 @@ func (a *AppNew) showPlanConfirmationWithFile(path, configFile string) {
 		info.WorkDir,
 		info.ConfigFile,
 		info.Content,
+		// Execute: normal execution (no auto-approve, plan doesn't need it anyway)
 		func() {
 			a.pages.RemovePage("confirm_tf")
-			a.executeTerraformCommand("Plan", info.WorkDir, info.Command)
+			a.executeTerraformCommand("Plan", info.WorkDir, info.Command, info.ConfigFile, info.Content)
 		},
+		// Auto Approve: not applicable for plan, but still provide the option
+		func() {
+			a.pages.RemovePage("confirm_tf")
+			a.executeTerraformCommand("Plan", info.WorkDir, info.Command, info.ConfigFile, info.Content)
+		},
+		// Cancel
 		func() {
 			a.pages.RemovePage("confirm_tf")
 			a.focusOnTree = true
@@ -541,10 +557,18 @@ func (a *AppNew) showApplyConfirmationWithFile(path, configFile string) {
 		info.WorkDir,
 		info.ConfigFile,
 		info.Content,
+		// Execute: normal execution (terraform will ask for 'yes')
 		func() {
 			a.pages.RemovePage("confirm_tf")
-			a.executeTerraformCommand("Apply", info.WorkDir, info.Command)
+			a.executeTerraformCommand("Apply", info.WorkDir, info.Command, info.ConfigFile, info.Content)
 		},
+		// Auto Approve: add -auto-approve flag
+		func() {
+			a.pages.RemovePage("confirm_tf")
+			cmdWithAutoApprove := info.Command + " -auto-approve"
+			a.executeTerraformCommand("Apply", info.WorkDir, cmdWithAutoApprove, info.ConfigFile, info.Content)
+		},
+		// Cancel
 		func() {
 			a.pages.RemovePage("confirm_tf")
 			a.focusOnTree = true
@@ -606,10 +630,18 @@ func (a *AppNew) showDestroyConfirmationWithFile(path, configFile string) {
 		info.WorkDir,
 		info.ConfigFile,
 		info.Content,
+		// Execute: normal execution (terraform will ask for 'yes')
 		func() {
 			a.pages.RemovePage("confirm_tf")
-			a.executeTerraformCommand("Destroy", info.WorkDir, info.Command)
+			a.executeTerraformCommand("Destroy", info.WorkDir, info.Command, info.ConfigFile, info.Content)
 		},
+		// Auto Approve: add -auto-approve flag
+		func() {
+			a.pages.RemovePage("confirm_tf")
+			cmdWithAutoApprove := info.Command + " -auto-approve"
+			a.executeTerraformCommand("Destroy", info.WorkDir, cmdWithAutoApprove, info.ConfigFile, info.Content)
+		},
+		// Cancel
 		func() {
 			a.pages.RemovePage("confirm_tf")
 			a.focusOnTree = true
@@ -623,8 +655,8 @@ func (a *AppNew) showDestroyConfirmationWithFile(path, configFile string) {
 	}
 }
 
-// executeTerraformCommand executes a terraform command
-func (a *AppNew) executeTerraformCommand(action, workDir, cmdStr string) {
+// executeTerraformCommand executes a terraform command with real-time streaming output
+func (a *AppNew) executeTerraformCommand(action, workDir, cmdStr, configFile, configData string) {
 	a.contentView.Clear()
 	a.contentView.SetTitle(fmt.Sprintf(" 🚀 Terraform %s ", action))
 	fmt.Fprintf(a.contentView, "[yellow]Executing Terraform %s[white]\n", action)
@@ -640,53 +672,117 @@ func (a *AppNew) executeTerraformCommand(action, workDir, cmdStr string) {
 		
 		cmd := exec.Command(parts[0], parts[1:]...)
 		cmd.Dir = workDir
-
-		// Add -auto-approve for Apply and Destroy if not present
-		if action == "Apply" || action == "Destroy" {
-			hasAutoApprove := false
-			for _, arg := range cmd.Args {
-				if arg == "-auto-approve" {
-					hasAutoApprove = true
-					break
-				}
-			}
-			if !hasAutoApprove {
-				cmd.Args = append(cmd.Args, "-auto-approve")
-				fmt.Fprintf(a.contentView, "[gray](Added -auto-approve flag)[white]\n")
+		
+		// Check if command has -auto-approve flag
+		hasAutoApprove := strings.Contains(cmdStr, "-auto-approve")
+		
+		// Create stdin pipe for interactive input (only if no auto-approve)
+		var stdinPipe io.WriteCloser
+		var stdinErr error
+		if !hasAutoApprove && (action == "Apply" || action == "Destroy") {
+			stdinPipe, stdinErr = cmd.StdinPipe()
+			if stdinErr != nil {
+				a.tviewApp.QueueUpdateDraw(func() {
+					fmt.Fprintf(a.contentView, "[red]Error creating stdin pipe:[white] %v\n", stdinErr)
+				})
+				return
 			}
 		}
 		
-		// Capture output
-		outputBuf := new(bytes.Buffer)
-		cmd.Stdout = outputBuf
-		cmd.Stderr = outputBuf
+		// Create pipes for real-time output streaming
+		stdoutPipe, err := cmd.StdoutPipe()
+		if err != nil {
+			a.tviewApp.QueueUpdateDraw(func() {
+				fmt.Fprintf(a.contentView, "[red]Error creating stdout pipe:[white] %v\n", err)
+			})
+			return
+		}
 		
+		stderrPipe, err := cmd.StderrPipe()
+		if err != nil {
+			a.tviewApp.QueueUpdateDraw(func() {
+				fmt.Fprintf(a.contentView, "[red]Error creating stderr pipe:[white] %v\n", err)
+			})
+			return
+		}
+		
+		// Start the command
 		startTime := time.Now()
-		err := cmd.Run()
-		output := outputBuf.Bytes()
+		if err := cmd.Start(); err != nil {
+			a.tviewApp.QueueUpdateDraw(func() {
+				fmt.Fprintf(a.contentView, "[red]Error starting command:[white] %v\n", err)
+			})
+			return
+		}
+		
+		// Buffer to save full output for history
+		var outputBuf bytes.Buffer
+		
+		// Channel to signal when "Enter a value:" is detected
+		confirmChan := make(chan bool)
+		userResponseChan := make(chan string)
+		
+		// Stream stdout in real-time and detect "Enter a value:"
+		go func() {
+			scanner := bufio.NewScanner(stdoutPipe)
+			for scanner.Scan() {
+				line := scanner.Text()
+				outputBuf.WriteString(line + "\n")
+				
+				// Detect terraform asking for confirmation
+				if !hasAutoApprove && (strings.Contains(line, "Enter a value:") || strings.Contains(line, "Only 'yes' will be accepted")) {
+					// Show confirmation dialog
+					a.tviewApp.QueueUpdateDraw(func() {
+						w := tview.ANSIWriter(a.contentView)
+						w.Write([]byte(line + "\n"))
+						a.contentView.ScrollToEnd()
+						
+						// Show Yes/No dialog
+						a.showApplyConfirmDialog(func() {
+							// User selected Yes
+							userResponseChan <- "yes\n"
+						}, func() {
+							// User selected No
+							userResponseChan <- "no\n"
+						})
+					})
+					
+					// Wait for user response
+					response := <-userResponseChan
+					if stdinPipe != nil {
+						stdinPipe.Write([]byte(response))
+						stdinPipe.Close()
+					}
+					confirmChan <- true
+				} else {
+					a.tviewApp.QueueUpdateDraw(func() {
+						w := tview.ANSIWriter(a.contentView)
+						w.Write([]byte(line + "\n"))
+						a.contentView.ScrollToEnd()
+					})
+				}
+			}
+		}()
+		
+		// Stream stderr in real-time
+		go func() {
+			scanner := bufio.NewScanner(stderrPipe)
+			for scanner.Scan() {
+				line := scanner.Text()
+				outputBuf.WriteString(line + "\n")
+				a.tviewApp.QueueUpdateDraw(func() {
+					w := tview.ANSIWriter(a.contentView)
+					w.Write([]byte(line + "\n"))
+					a.contentView.ScrollToEnd()
+				})
+			}
+		}()
+		
+		// Wait for command to complete
+		cmdErr := cmd.Wait()
 		
 		// Save to history if it's apply or destroy
 		if (action == "Apply" || action == "Destroy") && a.historyDB != nil {
-			// Extract config file from command
-			configFile := ""
-			configData := ""
-			for i, part := range parts {
-				if strings.HasPrefix(part, "-var-file=") {
-					configFile = strings.TrimPrefix(part, "-var-file=")
-					// Read config file content
-					if data, readErr := ioutil.ReadFile(configFile); readErr == nil {
-						configData = string(data)
-					}
-					break
-				} else if part == "-var-file" && i+1 < len(parts) {
-					configFile = parts[i+1]
-					if data, readErr := ioutil.ReadFile(configFile); readErr == nil {
-						configData = string(data)
-					}
-					break
-				}
-			}
-			
 			// Get user and branch info
 			user := os.Getenv("USER")
 			if user == "" {
@@ -706,11 +802,11 @@ func (a *AppNew) executeTerraformCommand(action, workDir, cmdStr string) {
 				Branch:     branch,
 				ConfigFile: configFile,
 				ConfigData: configData,
-				Success:    err == nil,
+				Success:    cmdErr == nil,
 				ErrorMsg:   "",
 			}
-			if err != nil {
-				entry.ErrorMsg = err.Error()
+			if cmdErr != nil {
+				entry.ErrorMsg = cmdErr.Error()
 			}
 			
 			if saveErr := a.historyDB.AddEntry(entry); saveErr != nil {
@@ -719,23 +815,46 @@ func (a *AppNew) executeTerraformCommand(action, workDir, cmdStr string) {
 		}
 		
 		a.tviewApp.QueueUpdateDraw(func() {
-			if err != nil {
-				fmt.Fprintf(a.contentView, "[red]Error:[white] %v\n\n", err)
+			if cmdErr != nil {
+				fmt.Fprintf(a.contentView, "\n[red]Error:[white] %v\n", cmdErr)
 			}
 			
-			// Use ANSIWriter to handle escape codes
-			w := tview.ANSIWriter(a.contentView)
-			w.Write(output)
-
-			a.contentView.AppendText("\n\n[green]Done.[white]")
+			fmt.Fprintf(a.contentView, "\n[green]Done.[white]")
 			
 			// Show saved to history message
 			if action == "Apply" || action == "Destroy" {
-				a.contentView.AppendText("\n[gray](Saved to history)[white]")
-
+				fmt.Fprintf(a.contentView, "\n[gray](Saved to history)[white]")
 			}
+			
+			// Scroll to end
+			a.contentView.ScrollToEnd()
 		})
 	}()
+}
+
+// showApplyConfirmDialog shows a Yes/No dialog for terraform confirmation
+func (a *AppNew) showApplyConfirmDialog(onYes, onNo func()) {
+	confirmDialog := tview.NewModal().
+		SetText("Do you want to perform these actions?\nTerraform will perform the actions described above.").
+		AddButtons([]string{"Yes", "No"}).
+		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+			a.pages.RemovePage("apply_confirm")
+			a.tviewApp.SetFocus(a.contentView)
+			
+			if buttonLabel == "Yes" {
+				onYes()
+			} else {
+				onNo()
+			}
+		})
+	
+	confirmDialog.SetBackgroundColor(tcell.ColorBlack)
+	confirmDialog.SetBorderColor(tcell.NewRGBColor(255, 165, 0))
+	confirmDialog.SetButtonBackgroundColor(tcell.NewRGBColor(50, 50, 50))
+	confirmDialog.SetButtonTextColor(tcell.ColorWhite)
+	
+	a.pages.AddPage("apply_confirm", confirmDialog, true, true)
+	a.tviewApp.SetFocus(confirmDialog)
 }
 
 // showHelp displays the help screen
