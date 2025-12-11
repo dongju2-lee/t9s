@@ -104,7 +104,7 @@ func (h *HistoryDB) AddEntry(entry *HistoryEntry) error {
 	result, err := h.db.Exec(query,
 		entry.Directory,
 		entry.Action,
-		entry.Timestamp,
+		entry.Timestamp.Format(time.RFC3339),
 		entry.User,
 		entry.Branch,
 		entry.ConfigFile,
@@ -161,7 +161,16 @@ func (h *HistoryDB) GetByDirectory(directory string, limit int) ([]*HistoryEntry
 		if err != nil {
 			return nil, err
 		}
-		entry.Timestamp, _ = time.Parse("2006-01-02 15:04:05", timestamp)
+		// Try multiple formats for robust parsing
+		if t, err := time.Parse(time.RFC3339, timestamp); err == nil {
+			entry.Timestamp = t
+		} else if t, err := time.Parse("2006-01-02 15:04:05", timestamp); err == nil {
+			entry.Timestamp = t
+		} else if t, err := time.Parse("2006-01-02T15:04:05", timestamp); err == nil {
+			entry.Timestamp = t
+		} else {
+			entry.Timestamp = time.Now()
+		}
 		entries = append(entries, entry)
 	}
 
@@ -204,7 +213,16 @@ func (h *HistoryDB) GetRecent(limit int) ([]*HistoryEntry, error) {
 		if err != nil {
 			return nil, err
 		}
-		entry.Timestamp, _ = time.Parse("2006-01-02 15:04:05", timestamp)
+		// Try multiple formats for robust parsing
+		if t, err := time.Parse(time.RFC3339, timestamp); err == nil {
+			entry.Timestamp = t
+		} else if t, err := time.Parse("2006-01-02 15:04:05", timestamp); err == nil {
+			entry.Timestamp = t
+		} else if t, err := time.Parse("2006-01-02T15:04:05", timestamp); err == nil {
+			entry.Timestamp = t
+		} else {
+			entry.Timestamp = time.Now()
+		}
 		entries = append(entries, entry)
 	}
 
