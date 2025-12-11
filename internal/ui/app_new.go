@@ -12,34 +12,34 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/rivo/tview"
 	"github.com/idongju/t9s/internal/config"
 	"github.com/idongju/t9s/internal/db"
 	"github.com/idongju/t9s/internal/git"
 	"github.com/idongju/t9s/internal/ui/components"
 	"github.com/idongju/t9s/internal/ui/dialog"
 	"github.com/idongju/t9s/internal/view"
+	"github.com/rivo/tview"
 )
 
 // AppNew represents the main application with new structure
 type AppNew struct {
-	tviewApp    *tview.Application
-	pages       *tview.Pages
-	
+	tviewApp *tview.Application
+	pages    *tview.Pages
+
 	// Views
-	headerView   *view.HeaderView
-	treeView     *view.TreeView
-	contentView  *view.ContentView
-	statusBar    *view.StatusBar
-	helpView     *view.HelpView
-	commandView  *view.CommandView
-	historyView  *view.HistoryView
-	
+	headerView  *view.HeaderView
+	treeView    *view.TreeView
+	contentView *view.ContentView
+	statusBar   *view.StatusBar
+	helpView    *view.HelpView
+	commandView *view.CommandView
+	historyView *view.HistoryView
+
 	// Components
-	executor    *components.CommandExecutor
-	historyDB   *db.HistoryDB
-	gitManager  *git.Manager
-	
+	executor   *components.CommandExecutor
+	historyDB  *db.HistoryDB
+	gitManager *git.Manager
+
 	// State
 	currentDir  string
 	currentFile string
@@ -98,12 +98,12 @@ func NewAppNew() *AppNew {
 	gitManager := git.NewManager()
 
 	app := &AppNew{
-		tviewApp:   tview.NewApplication(),
-		currentDir: currentDir,
-		config:     cfg,
-		pages:      tview.NewPages(),
-		gitManager: gitManager,
-		historyDB:  historyDB,
+		tviewApp:    tview.NewApplication(),
+		currentDir:  currentDir,
+		config:      cfg,
+		pages:       tview.NewPages(),
+		gitManager:  gitManager,
+		historyDB:   historyDB,
 		focusOnTree: true, // Start with tree focused
 	}
 
@@ -117,32 +117,32 @@ func NewAppNew() *AppNew {
 func (a *AppNew) setupViews() {
 	// Create views
 	a.headerView = view.NewHeaderView(a.currentDir)
-	
+
 	// Update git branch info in header
 	if status, err := a.gitManager.GetStatus(a.currentDir); err == nil {
 		a.headerView.SetGitBranch(status.Branch, status.IsDirty)
 	}
-	
+
 	a.treeView = view.NewTreeView(a.currentDir)
 	a.contentView = view.NewContentView()
 	a.statusBar = view.NewStatusBar(a.currentDir)
-	
+
 	// Create executor
 	a.executor = components.NewCommandExecutor(a.tviewApp, a.contentView, a.config, a.historyDB)
-	
+
 	// Setup tree view handler
 	a.treeView.SetFileSelectHandler(func(path string) {
 		a.currentFile = path
 		a.contentView.DisplayFile(path)
 	})
-	
+
 	// Setup tree view change handler
 	a.treeView.SetChangedFunc(func(node *tview.TreeNode) {
 		reference := node.GetReference()
 		if reference != nil {
 			path := reference.(string)
 			a.statusBar.UpdatePath(path)
-			
+
 			// Check if it's a directory
 			info, err := os.Stat(path)
 			if err == nil && info.IsDir() {
@@ -175,12 +175,12 @@ func (a *AppNew) setupKeyBindings() {
 	a.tviewApp.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		// Get current page name
 		currentPage, _ := a.pages.GetFrontPage()
-		
+
 		// Only handle global shortcuts when on main page
 		if currentPage != "main" {
 			return event
 		}
-		
+
 		switch event.Key() {
 		case tcell.KeyTab:
 			// Toggle focus between tree and content view
@@ -294,17 +294,17 @@ func (a *AppNew) showSettings() {
 						a.statusBar.UpdatePath(reference.(string))
 					}
 				})
-				
+
 				// Rebuild header and status bar
 				a.headerView = view.NewHeaderView(a.currentDir)
-				
+
 				// Update git branch info in header
 				if status, err := a.gitManager.GetStatus(a.currentDir); err == nil {
 					a.headerView.SetGitBranch(status.Branch, status.IsDirty)
 				}
-				
+
 				a.statusBar = view.NewStatusBar(a.currentDir)
-				
+
 				// Rebuild main layout
 				a.rebuildMainPage()
 			}
@@ -388,7 +388,7 @@ func (a *AppNew) showInitConfirmation(path string) {
 // showInitConfirmationWithFile shows confirmation dialog with selected file
 func (a *AppNew) showInitConfirmationWithFile(path, configFile string) {
 	info := components.GetTerraformCommandInfo(path, a.config.Commands.InitTemplate, configFile, a.config)
-	
+
 	confirmDialog := dialog.NewTerraformConfirmDialog(
 		"terraform init",
 		info.WorkDir,
@@ -461,7 +461,7 @@ func (a *AppNew) showPlanConfirmation(path string) {
 // showPlanConfirmationWithFile shows confirmation dialog with selected file
 func (a *AppNew) showPlanConfirmationWithFile(path, configFile string) {
 	info := components.GetTerraformCommandInfo(path, a.config.Commands.PlanTemplate, configFile, a.config)
-	
+
 	confirmDialog := dialog.NewTerraformConfirmDialog(
 		"terraform plan",
 		info.WorkDir,
@@ -507,7 +507,7 @@ func (a *AppNew) showApplyConfirmation() {
 
 	// Check if config directory exists
 	configDir := filepath.Join(workDir, "config")
-	
+
 	// DEBUG LOGGING
 	f, _ := os.OpenFile("/tmp/t9s_debug.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if f != nil {
@@ -551,7 +551,7 @@ func (a *AppNew) showApplyConfirmation() {
 // showApplyConfirmationWithFile shows confirmation dialog with selected file
 func (a *AppNew) showApplyConfirmationWithFile(path, configFile string) {
 	info := components.GetTerraformCommandInfo(path, a.config.Commands.ApplyTemplate, configFile, a.config)
-	
+
 	confirmDialog := dialog.NewTerraformConfirmDialog(
 		"terraform apply",
 		info.WorkDir,
@@ -624,7 +624,7 @@ func (a *AppNew) showDestroyConfirmation(path string) {
 // showDestroyConfirmationWithFile shows confirmation dialog with selected file
 func (a *AppNew) showDestroyConfirmationWithFile(path, configFile string) {
 	info := components.GetTerraformCommandInfo(path, a.config.Commands.DestroyTemplate, configFile, a.config)
-	
+
 	confirmDialog := dialog.NewTerraformConfirmDialog(
 		"terraform destroy",
 		info.WorkDir,
@@ -662,7 +662,7 @@ func (a *AppNew) executeTerraformCommand(action, workDir, cmdStr, configFile, co
 		a.focusOnTree = false
 		a.tviewApp.SetFocus(a.contentView)
 	}
-	
+
 	a.contentView.Clear()
 	a.contentView.SetTitle(fmt.Sprintf(" 🚀 Terraform %s ", action))
 	fmt.Fprintf(a.contentView, "[yellow]Executing Terraform %s[white]\n", action)
@@ -675,13 +675,13 @@ func (a *AppNew) executeTerraformCommand(action, workDir, cmdStr, configFile, co
 		if len(parts) == 0 {
 			return
 		}
-		
+
 		cmd := exec.Command(parts[0], parts[1:]...)
 		cmd.Dir = workDir
-		
+
 		// Check if command has -auto-approve flag
 		hasAutoApprove := strings.Contains(cmdStr, "-auto-approve")
-		
+
 		// Create stdin pipe for interactive input (only if no auto-approve)
 		var stdinPipe io.WriteCloser
 		var stdinErr error
@@ -694,7 +694,7 @@ func (a *AppNew) executeTerraformCommand(action, workDir, cmdStr, configFile, co
 				return
 			}
 		}
-		
+
 		// Create pipes for real-time output streaming
 		stdoutPipe, err := cmd.StdoutPipe()
 		if err != nil {
@@ -703,7 +703,7 @@ func (a *AppNew) executeTerraformCommand(action, workDir, cmdStr, configFile, co
 			})
 			return
 		}
-		
+
 		stderrPipe, err := cmd.StderrPipe()
 		if err != nil {
 			a.tviewApp.QueueUpdateDraw(func() {
@@ -711,7 +711,7 @@ func (a *AppNew) executeTerraformCommand(action, workDir, cmdStr, configFile, co
 			})
 			return
 		}
-		
+
 		// Start the command
 		startTime := time.Now()
 		if err := cmd.Start(); err != nil {
@@ -720,21 +720,21 @@ func (a *AppNew) executeTerraformCommand(action, workDir, cmdStr, configFile, co
 			})
 			return
 		}
-		
+
 		// Buffer to save full output for history
 		var outputBuf bytes.Buffer
-		
+
 		// Channel to signal when "Enter a value:" is detected
 		confirmChan := make(chan bool)
 		userResponseChan := make(chan string)
-		
+
 		// Stream stdout in real-time and detect "Enter a value:"
 		go func() {
 			scanner := bufio.NewScanner(stdoutPipe)
 			for scanner.Scan() {
 				line := scanner.Text()
 				outputBuf.WriteString(line + "\n")
-				
+
 				// Detect terraform asking for confirmation
 				if !hasAutoApprove && (strings.Contains(line, "Enter a value:") || strings.Contains(line, "Only 'yes' will be accepted")) {
 					// Show confirmation dialog
@@ -742,7 +742,7 @@ func (a *AppNew) executeTerraformCommand(action, workDir, cmdStr, configFile, co
 						w := tview.ANSIWriter(a.contentView)
 						w.Write([]byte(line + "\n"))
 						a.contentView.ScrollToEnd()
-						
+
 						// Show Yes/No dialog
 						a.showApplyConfirmDialog(func() {
 							// User selected Yes
@@ -752,7 +752,7 @@ func (a *AppNew) executeTerraformCommand(action, workDir, cmdStr, configFile, co
 							userResponseChan <- "no\n"
 						})
 					})
-					
+
 					// Wait for user response
 					response := <-userResponseChan
 					if stdinPipe != nil {
@@ -769,7 +769,7 @@ func (a *AppNew) executeTerraformCommand(action, workDir, cmdStr, configFile, co
 				}
 			}
 		}()
-		
+
 		// Stream stderr in real-time
 		go func() {
 			scanner := bufio.NewScanner(stderrPipe)
@@ -783,10 +783,10 @@ func (a *AppNew) executeTerraformCommand(action, workDir, cmdStr, configFile, co
 				})
 			}
 		}()
-		
+
 		// Wait for command to complete
 		cmdErr := cmd.Wait()
-		
+
 		// Save to history if it's apply or destroy
 		if (action == "Apply" || action == "Destroy") && a.historyDB != nil {
 			// Get user and branch info
@@ -794,12 +794,12 @@ func (a *AppNew) executeTerraformCommand(action, workDir, cmdStr, configFile, co
 			if user == "" {
 				user = "unknown"
 			}
-			
+
 			branch := ""
 			if status, gitErr := a.gitManager.GetStatus(workDir); gitErr == nil {
 				branch = status.Branch
 			}
-			
+
 			entry := &db.HistoryEntry{
 				Directory:  workDir,
 				Action:     strings.ToLower(action),
@@ -814,24 +814,24 @@ func (a *AppNew) executeTerraformCommand(action, workDir, cmdStr, configFile, co
 			if cmdErr != nil {
 				entry.ErrorMsg = cmdErr.Error()
 			}
-			
+
 			if saveErr := a.historyDB.AddEntry(entry); saveErr != nil {
 				fmt.Fprintf(os.Stderr, "Failed to save history: %v\n", saveErr)
 			}
 		}
-		
+
 		a.tviewApp.QueueUpdateDraw(func() {
 			if cmdErr != nil {
 				fmt.Fprintf(a.contentView, "\n[red]Error:[white] %v\n", cmdErr)
 			}
-			
+
 			fmt.Fprintf(a.contentView, "\n[green]Done.[white]")
-			
+
 			// Show saved to history message
 			if action == "Apply" || action == "Destroy" {
 				fmt.Fprintf(a.contentView, "\n[gray](Saved to history)[white]")
 			}
-			
+
 			// Scroll to end
 			a.contentView.ScrollToEnd()
 		})
@@ -846,19 +846,19 @@ func (a *AppNew) showApplyConfirmDialog(onYes, onNo func()) {
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 			a.pages.RemovePage("apply_confirm")
 			a.tviewApp.SetFocus(a.contentView)
-			
+
 			if buttonLabel == "Yes" {
 				onYes()
 			} else {
 				onNo()
 			}
 		})
-	
+
 	confirmDialog.SetBackgroundColor(tcell.ColorBlack)
 	confirmDialog.SetBorderColor(tcell.NewRGBColor(255, 165, 0))
 	confirmDialog.SetButtonBackgroundColor(tcell.NewRGBColor(50, 50, 50))
 	confirmDialog.SetButtonTextColor(tcell.ColorWhite)
-	
+
 	a.pages.AddPage("apply_confirm", confirmDialog, true, true)
 	a.tviewApp.SetFocus(confirmDialog)
 }
@@ -868,7 +868,7 @@ func (a *AppNew) showHelp() {
 	if a.helpView == nil {
 		a.helpView = view.NewHelpView()
 	}
-	
+
 	// Create modal with help view
 	modal := tview.NewFlex().
 		AddItem(nil, 0, 1, false).
@@ -879,7 +879,7 @@ func (a *AppNew) showHelp() {
 			AddItem(nil, 0, 1, false), 100, 0, true).
 		AddItem(nil, 0, 1, false)
 	modal.SetBackgroundColor(tcell.ColorBlack)
-	
+
 	// Setup input capture for help view
 	modal.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEscape || event.Rune() == 'q' || event.Rune() == '?' || event.Rune() == 'H' {
@@ -889,7 +889,7 @@ func (a *AppNew) showHelp() {
 		}
 		return event
 	})
-	
+
 	a.pages.AddPage("help", modal, true, true)
 }
 
@@ -913,7 +913,7 @@ func (a *AppNew) showHistory(path string) {
 
 	// Create history view
 	a.historyView = view.NewHistoryView(path, entries)
-	
+
 	// Set up key handler for history view
 	a.historyView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
@@ -963,13 +963,13 @@ func (a *AppNew) showCommandInput() {
 	if path == "" {
 		path = a.currentDir
 	}
-	
+
 	// Check if it's a file, if so use parent directory
 	info, err := os.Stat(path)
 	if err == nil && !info.IsDir() {
 		path = filepath.Dir(path)
 	}
-	
+
 	// Create or update command view
 	if a.commandView == nil {
 		a.commandView = view.NewCommandView(path)
@@ -982,7 +982,7 @@ func (a *AppNew) showCommandInput() {
 		a.commandView.UpdatePath(path)
 		a.commandView.Clear()
 	}
-	
+
 	// Setup input capture
 	a.commandView.GetInput().SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEscape {
@@ -992,7 +992,7 @@ func (a *AppNew) showCommandInput() {
 		}
 		return event
 	})
-	
+
 	a.pages.AddPage("command", a.commandView, true, true)
 	a.tviewApp.SetFocus(a.commandView.GetInput())
 }
@@ -1002,27 +1002,27 @@ func (a *AppNew) executeCommand(cmd string) {
 	if cmd == "" {
 		return
 	}
-	
+
 	workDir := a.commandView.GetCurrentDir()
-	
+
 	a.contentView.Clear()
 	a.contentView.SetTitle(" 🚀 Command Execution ")
 	fmt.Fprintf(a.contentView, "[yellow]Executing Command[white]\n")
 	fmt.Fprintf(a.contentView, "[cyan]Directory:[white] %s\n", workDir)
 	fmt.Fprintf(a.contentView, "[cyan]Command:[white] %s\n", cmd)
 	fmt.Fprintf(a.contentView, "[cyan]%s[white]\n\n", strings.Repeat("─", 60))
-	
+
 	go func() {
 		parts := strings.Fields(cmd)
 		if len(parts) == 0 {
 			return
 		}
-		
+
 		execCmd := exec.Command(parts[0], parts[1:]...)
 		execCmd.Dir = workDir
-		
+
 		output, err := execCmd.CombinedOutput()
-		
+
 		a.tviewApp.QueueUpdateDraw(func() {
 			if err != nil {
 				fmt.Fprintf(a.contentView, "[red]Error:[white] %v\n\n", err)
@@ -1146,7 +1146,7 @@ func (a *AppNew) showCommitDialog(workDir, targetBranch string) {
 func (a *AppNew) performBranchSwitch(workDir, targetBranch, mode string) {
 	a.contentView.Clear()
 	a.contentView.SetTitle(" 🌿 Branch Switch ")
-	
+
 	fmt.Fprintf(a.contentView, "[yellow]Switching Branch[white]\n")
 	fmt.Fprintf(a.contentView, "[cyan]Directory:[white] %s\n", workDir)
 	fmt.Fprintf(a.contentView, "[cyan]Target Branch:[white] %s\n", targetBranch)
@@ -1208,7 +1208,7 @@ func (a *AppNew) performBranchSwitch(workDir, targetBranch, mode string) {
 				fmt.Fprintf(a.contentView, "[red]Failed to switch branch: %v[white]\n", err)
 			} else {
 				fmt.Fprintf(a.contentView, "[green]Successfully switched to branch: %s[white]\n", targetBranch)
-				
+
 				// Update header with new branch info
 				if status, err := a.gitManager.GetStatus(workDir); err == nil {
 					a.headerView.SetGitBranch(status.Branch, status.IsDirty)
@@ -1223,4 +1223,3 @@ func (a *AppNew) performBranchSwitch(workDir, targetBranch, mode string) {
 func (a *AppNew) Run() error {
 	return a.tviewApp.Run()
 }
-
