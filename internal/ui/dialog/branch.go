@@ -91,3 +91,4 @@ func (bd *BranchDialog) GetList() *tview.List {
 	return bd.list
 }
 
+
