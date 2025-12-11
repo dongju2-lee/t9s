@@ -119,7 +119,7 @@ defaults:
 - [x] **k9s 스타일 아키텍처 적용** (Model/View/Controller)
 - [x] UI 컴포넌트 분리 (Header, Tree, Content, StatusBar)
 
-### v0.2.7 (Current) - UX 및 기능 강화
+### v0.2.8 (Current) - UX 및 기능 강화
 - [x] **파일 선택 다이얼로그**: Init/Plan/Apply/Destroy 시 설정 파일 선택
 - [x] **ANSI 컬러 지원**: Terraform 출력 컬러 유지
 - [x] **빠른 스크롤**: `u`/`d` 키 및 `Shift+방향키` 지원
