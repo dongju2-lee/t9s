@@ -657,6 +657,12 @@ func (a *AppNew) showDestroyConfirmationWithFile(path, configFile string) {
 
 // executeTerraformCommand executes a terraform command with real-time streaming output
 func (a *AppNew) executeTerraformCommand(action, workDir, cmdStr, configFile, configData string) {
+	// Auto-switch focus to content view for Apply/Destroy to prevent accidental input
+	if action == "Apply" || action == "Destroy" {
+		a.focusOnTree = false
+		a.tviewApp.SetFocus(a.contentView)
+	}
+	
 	a.contentView.Clear()
 	a.contentView.SetTitle(fmt.Sprintf(" 🚀 Terraform %s ", action))
 	fmt.Fprintf(a.contentView, "[yellow]Executing Terraform %s[white]\n", action)
