@@ -87,8 +87,8 @@ func NewAppNew() *AppNew {
 		}
 	}
 
-	// Initialize history DB
-	historyDB, err := db.NewHistoryDB()
+	// Initialize history DB in terraform root directory (shared by all users)
+	historyDB, err := db.NewHistoryDB(currentDir)
 	if err != nil {
 		// Fallback if DB fails - app still works
 		fmt.Fprintf(os.Stderr, "Warning: Failed to initialize history DB: %v\n", err)

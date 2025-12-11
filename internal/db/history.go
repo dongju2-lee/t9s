@@ -29,14 +29,11 @@ type HistoryDB struct {
 	db *sql.DB
 }
 
-// NewHistoryDB creates a new history database
-func NewHistoryDB() (*HistoryDB, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get home dir: %w", err)
-	}
-
-	dbDir := filepath.Join(home, ".t9s")
+// NewHistoryDB creates a new history database in the terraform root directory
+// This allows all users to share the same history
+func NewHistoryDB(terraformRoot string) (*HistoryDB, error) {
+	// Store history.db in terraform root directory so all users can share it
+	dbDir := filepath.Join(terraformRoot, ".t9s")
 	if err := os.MkdirAll(dbDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create db dir: %w", err)
 	}
