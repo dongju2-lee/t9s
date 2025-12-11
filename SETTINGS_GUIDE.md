@@ -23,9 +23,34 @@ Terraform Root Directory: /Users/user/terraform
 **동작**:
 - 앱 시작 시 이 디렉토리를 기준으로 파일 트리를 표시합니다
 - 설정 저장 시 디렉토리가 변경되면 UI가 자동으로 리빌드됩니다
-- 각 사용자의 프로젝트 위치에 맞게 설정 가능
 
-### 2. Terraform Plan Template
+---
+
+### 2. Terraform Init Template
+```
+Terraform Init Template: terraform init -backend-config={initconf}
+```
+
+**설명**: `i` 키를 눌렀을 때 실행될 Terraform Init 명령어 템플릿입니다.
+
+**템플릿 변수**:
+- `{initconf}`: 선택된 .conf 파일 경로로 자동 치환됩니다
+
+**예시**:
+```bash
+# 기본
+terraform init -backend-config={initconf}
+
+# 재초기화
+terraform init -reconfigure -backend-config={initconf}
+
+# 마이그레이션
+terraform init -migrate-state -backend-config={initconf}
+```
+
+---
+
+### 3. Terraform Plan Template
 ```
 Terraform Plan Template: terraform plan -var-file={varfile}
 ```
@@ -47,7 +72,9 @@ terraform plan -var-file={varfile} -out=tfplan
 terraform plan -var-file={varfile} -parallelism=10
 ```
 
-### 3. Terraform Apply Template
+---
+
+### 4. Terraform Apply Template
 ```
 Terraform Apply Template: terraform apply -var-file={varfile}
 ```
@@ -59,34 +86,57 @@ Terraform Apply Template: terraform apply -var-file={varfile}
 
 **예시**:
 ```bash
-# 기본
+# 기본 (Execute 버튼 - Yes/No 확인)
 terraform apply -var-file={varfile}
 
-# 자동 승인
+# Auto Approve 버튼 선택 시 자동으로 -auto-approve 추가
 terraform apply -var-file={varfile} -auto-approve
-
-# Plan 파일 사용
-terraform apply tfplan
 ```
 
-### 4. Default Var File
+---
+
+### 5. Terraform Destroy Template
 ```
-Default Var File: config/prod.tfvars
+Terraform Destroy Template: terraform destroy -var-file={varfile}
 ```
 
-**설명**: 디렉토리 선택 시 기본으로 사용할 .tfvars 파일의 상대 경로입니다.
+**설명**: `d` 키를 눌렀을 때 실행될 Terraform Destroy 명령어 템플릿입니다.
+
+**템플릿 변수**:
+- `{varfile}`: 선택된 .tfvars 파일 경로로 자동 치환됩니다
+
+---
+
+### 6. Default tfvars File
+```
+Default tfvars File: config/env.tfvars
+```
+
+**설명**: 파일 선택 다이얼로그에서 기본으로 선택될 .tfvars 파일의 상대 경로입니다.
 
 **예시**:
 ```bash
-# 프로덕션 환경
 config/prod.tfvars
-
-# 개발 환경
 config/dev.tfvars
-
-# 커스텀 경로
 vars/production.tfvars
 ```
+
+---
+
+### 7. Init Config File
+```
+Init Config File: config/env.conf
+```
+
+**설명**: Terraform Init 시 기본으로 선택될 .conf 파일의 상대 경로입니다.
+
+**예시**:
+```bash
+config/backend.conf
+config/env.conf
+```
+
+---
 
 ## 설정 파일 위치
 
@@ -106,68 +156,43 @@ defaults:
   auto_refresh: true
   refresh_interval: 60
 commands:
+  init_template: terraform init -backend-config={initconf}
   plan_template: terraform plan -var-file={varfile}
   apply_template: terraform apply -var-file={varfile}
-  var_file: config/prod.tfvars
+  destroy_template: terraform destroy -var-file={varfile}
+  tfvars_file: config/env.tfvars
+  init_conf_file: config/env.conf
 ```
+
+---
 
 ## 사용 예시
 
 ### 예시 1: 개인 프로젝트 설정
-```
-Terraform Root Directory: /Users/dongju/dev/my-terraform
-Terraform Plan Template: terraform plan -var-file={varfile}
-Terraform Apply Template: terraform apply -var-file={varfile} -auto-approve
-Default Var File: environments/production.tfvars
+```yaml
+terraform_root: /Users/dongju/dev/my-terraform
+commands:
+  init_template: terraform init -backend-config={initconf}
+  plan_template: terraform plan -var-file={varfile}
+  apply_template: terraform apply -var-file={varfile}
+  destroy_template: terraform destroy -var-file={varfile}
+  tfvars_file: environments/production.tfvars
+  init_conf_file: config/backend.conf
 ```
 
 ### 예시 2: 회사 프로젝트 설정
-```
-Terraform Root Directory: /home/user/company/infrastructure
-Terraform Plan Template: terraform plan -var-file={varfile} -out=tfplan
-Terraform Apply Template: terraform apply tfplan
-Default Var File: config/prod.tfvars
-```
-
-### 예시 3: 멀티 환경 설정
-```
-Terraform Root Directory: ~/projects/multi-env-terraform
-Terraform Plan Template: terraform plan -var-file={varfile} -parallelism=20
-Terraform Apply Template: terraform apply -var-file={varfile}
-Default Var File: vars/staging.tfvars
+```yaml
+terraform_root: /home/user/company/infrastructure
+commands:
+  init_template: terraform init -reconfigure -backend-config={initconf}
+  plan_template: terraform plan -var-file={varfile} -out=tfplan
+  apply_template: terraform apply -var-file={varfile}
+  destroy_template: terraform destroy -var-file={varfile}
+  tfvars_file: config/prod.tfvars
+  init_conf_file: config/prod.conf
 ```
 
-## 설정 UI 화면
-
-```
-╔═══════════════════════════════════════════════════════════════════╗
-║  T9s - Settings                                                    ║
-╚═══════════════════════════════════════════════════════════════════╝
-
-┌─ ⚙️  Settings ─────────────────────────────────────────────────────┐
-│                                                                     │
-│  Terraform Root Directory: /Users/dongju/dev/terraform____________ │
-│                                                                     │
-│  Terraform Plan Template: terraform plan -var-file={varfile}______ │
-│                                                                     │
-│  Terraform Apply Template: terraform apply -var-file={varfile}____ │
-│                                                                     │
-│  Default Var File: config/prod.tfvars____________________________ │
-│                                                                     │
-│                    [ Save ]  [ Cancel ]                             │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-
-Terraform Root Directory:
-  Directory where your Terraform code is located (e.g., /home/user/terraform)
-
-Template Variables:
-  {varfile} - Will be replaced with the var file path
-
-Examples:
-  terraform plan -var-file={varfile}
-  terraform apply -var-file={varfile} -auto-approve
-```
+---
 
 ## 팁
 
@@ -177,29 +202,17 @@ Examples:
 ❌ 비권장: ../terraform (상대 경로는 작동하지 않을 수 있음)
 ```
 
-### 2. 경로에 공백이 있는 경우
-```
-✅ 가능: /Users/dong ju/my terraform
-💡 하지만 공백 없는 경로를 권장
-```
-
-### 3. 홈 디렉토리 축약
-```
-✅ 가능: ~/terraform
-✅ 권장: /Users/dongju/terraform (전체 경로)
-```
-
-### 4. 환경별 설정 변경
+### 2. 환경별 설정 변경
 개발/프로덕션 환경을 전환할 때:
 1. `s` 키로 설정 열기
-2. Default Var File만 변경 (`config/dev.tfvars` ↔ `config/prod.tfvars`)
+2. Default tfvars File만 변경 (`config/dev.tfvars` ↔ `config/prod.tfvars`)
 3. Save
 
-### 5. 프로젝트별 설정
-여러 Terraform 프로젝트 작업 시:
-1. 프로젝트 A 작업: Terraform Root Directory를 `/path/to/projectA`로 설정
-2. 프로젝트 B 작업: Terraform Root Directory를 `/path/to/projectB`로 설정
-3. 필요할 때마다 설정에서 변경
+### 3. Execute vs Auto Approve
+- **Execute**: Terraform이 Plan 결과를 보여주고 Yes/No 다이얼로그로 확인
+- **Auto Approve**: `-auto-approve` 플래그로 즉시 실행
+
+---
 
 ## 트러블슈팅
 
@@ -213,18 +226,13 @@ chmod 755 ~/.t9s
 chmod 644 ~/.t9s/config.yaml
 ```
 
-### 경로를 변경했는데 트리가 업데이트되지 않음
-1. Save 버튼을 눌렀는지 확인
-2. T9s를 재시작
-3. 경로가 올바른지 확인 (`ls /path/to/directory`)
-
-### 디렉토리가 존재하지 않음
+### 히스토리가 저장되지 않음
 ```bash
-# 디렉토리 생성
-mkdir -p /path/to/terraform
-
-# 또는 기존 디렉토리 경로로 설정 변경
+# SQLite 파일 확인
+ls -la ~/.t9s/history.db
 ```
+
+---
 
 ## 단축키
 
@@ -237,6 +245,3 @@ mkdir -p /path/to/terraform
 ---
 
 **참고**: 설정 변경 후 반드시 **Save** 버튼을 눌러야 저장됩니다!
-
-
-

@@ -1,145 +1,131 @@
-# T9s 디렉토리 구조 (v0.2.0)
+# T9s 디렉토리 구조 (v0.3.0)
 
 ```
 T9s/
 │
 ├── 📄 README.md                    # 프로젝트 개요 및 사용법
 ├── 📄 QUICKSTART.md                # 빠른 시작 가이드
+├── 📄 SETTINGS_GUIDE.md            # 설정 가이드
 ├── 📄 TODO.md                      # 로드맵 및 TODO
+├── 📄 CHANGELOG.md                 # 변경 이력
 │
-├── 📄 STRUCTURE.md                 # 기존 구조 문서 (v0.1.0)
-├── 📄 ARCHITECTURE.md              # 새로운 아키텍처 설명 (v0.2.0) ⭐
-├── 📄 MIGRATION.md                 # 마이그레이션 가이드 ⭐
-├── 📄 REFACTORING_SUMMARY.md       # 리팩토링 요약 ⭐
+├── 📄 STRUCTURE.md                 # 프로젝트 구조
+├── 📄 ARCHITECTURE.md              # 아키텍처 설명
+├── 📄 MIGRATION.md                 # 마이그레이션 가이드
+├── 📄 REFACTORING_SUMMARY.md       # 리팩토링 요약
 ├── 📄 DIRECTORY_TREE.md            # 이 파일
 │
 ├── 📄 go.mod                       # Go 모듈 정의
 ├── 📄 go.sum                       # 의존성 체크섬
-├── 📄 .gitignore                   # Git 제외 파일
 ├── 🔧 install.sh                   # 설치 스크립트
 │
 ├── 📁 cmd/                         # 명령줄 애플리케이션
 │   └── 📁 t9s/
-│       └── 📄 main.go              # CLI 진입점 (v0.2.0 - NewAppNew 사용)
+│       └── 📄 main.go              # CLI 진입점
 │
 └── 📁 internal/                    # 내부 패키지
     │
-    ├── 📁 model/                   # ⭐ 데이터 모델 (k9s 스타일)
-    │   ├── 📄 terraform.go         # Terraform 관련 모델
-    │   │   └── TerraformDirectory, TerraformStatus, HelmRelease
-    │   └── 📄 git.go               # Git 관련 모델
-    │       └── GitStatus
+    ├── 📁 config/                  # 설정 관리
+    │   └── 📄 config.go            # YAML 설정 로드/저장
     │
-    ├── 📁 dao/                     # ⭐ Data Access Object (k9s 스타일)
-    │   ├── 📄 terraform.go         # Terraform 데이터 접근
-    │   │   └── TerraformDAO
-    │   │       ├── ListDirectories()
-    │   │       ├── CheckDrift()
-    │   │       ├── Plan()
-    │   │       ├── Apply()
-    │   │       └── GetHelmReleases()
-    │   └── 📄 git.go               # Git 데이터 접근
-    │       └── GitDAO
+    ├── 📁 db/                      # 데이터베이스 ⭐
+    │   └── 📄 history.go           # SQLite 히스토리 DB
+    │       └── HistoryDB, HistoryEntry
+    │
+    ├── 📁 git/                     # Git 통합
+    │   └── 📄 manager.go           # Git 명령 실행
+    │       └── Manager
     │           ├── GetStatus()
-    │           └── GetDiff()
+    │           ├── ListBranches()
+    │           ├── CheckoutBranch()
+    │           ├── StashChanges()
+    │           ├── CommitChanges()
+    │           └── ForceCheckout()
     │
-    ├── 📁 view/                    # ⭐ UI View 컴포넌트 (k9s 스타일)
+    ├── 📁 terraform/               # Terraform 통합
+    │   └── 📄 manager.go           # Terraform 명령 실행
+    │
+    ├── 📁 model/                   # 데이터 모델
+    │   ├── 📄 terraform.go         # Terraform 관련 모델
+    │   └── 📄 git.go               # Git 관련 모델
+    │
+    ├── 📁 dao/                     # Data Access Object
+    │   ├── 📄 terraform.go         # Terraform 데이터 접근
+    │   └── 📄 git.go               # Git 데이터 접근
+    │
+    ├── 📁 view/                    # UI View 컴포넌트
     │   ├── 📄 tree_view.go         # 파일 트리 뷰
     │   │   └── TreeView
     │   ├── 📄 content_view.go      # 컨텐츠 표시 뷰
     │   │   └── ContentView
-    │   ├── 📄 header_view.go       # 헤더 뷰
+    │   ├── 📄 header_view.go       # 헤더 뷰 (브랜치 표시) ⭐
     │   │   └── HeaderView
-    │   └── 📄 status_bar.go        # 상태바 뷰
-    │       └── StatusBar
+    │   │       └── SetGitBranch()
+    │   ├── 📄 status_bar.go        # 상태바 뷰
+    │   │   └── StatusBar
+    │   ├── 📄 help_view.go         # 도움말 뷰 ⭐
+    │   │   └── HelpView
+    │   ├── 📄 history_view.go      # 히스토리 뷰 ⭐
+    │   │   └── HistoryView
+    │   └── 📄 command_view.go      # 커맨드 입력 뷰 ⭐
+    │       └── CommandView
     │
-    ├── 📁 ui/                      # UI 관련
-    │   ├── 📄 app.go               # 레거시 앱 (호환성 유지)
-    │   │   └── App (v0.1.0)
-    │   ├── 📄 app_new.go           # ⭐ 새로운 구조의 앱
-    │   │   └── AppNew (v0.2.0)
-    │   │
-    │   ├── 📁 components/          # ⭐ 재사용 가능한 UI 컴포넌트
-    │   │   └── 📄 executor.go      # 명령 실행기
-    │   │       └── CommandExecutor
-    │   │           ├── ExecutePlan()
-    │   │           ├── ExecuteApply()
-    │   │           ├── ShowHistory()
-    │   │           ├── ShowHelm()
-    │   │           └── EditFile()
-    │   │
-    │   └── 📁 dialog/              # ⭐ 다이얼로그 컴포넌트
-    │       ├── 📄 confirm.go       # 확인 다이얼로그
-    │       │   └── ConfirmDialog
-    │       └── 📄 settings.go      # 설정 다이얼로그
-    │           └── SettingsDialog
-    │
-    ├── 📁 config/                  # 설정 관리
-    │   └── 📄 config.go            # 설정 파일 로드/저장
-    │       └── Config
-    │
-    ├── 📁 terraform/               # 레거시 (추후 제거 예정)
-    │   └── 📄 manager.go           # Terraform 매니저 (v0.1.0)
-    │
-    └── 📁 git/                     # 레거시 (추후 제거 예정)
-        └── 📄 manager.go           # Git 매니저 (v0.1.0)
+    └── 📁 ui/                      # UI 관련
+        ├── 📄 app.go               # 레거시 앱
+        ├── 📄 app_new.go           # 새로운 구조의 앱 ⭐
+        │   └── AppNew
+        │       ├── executeTerraformCommand()
+        │       ├── showApplyConfirmDialog()
+        │       ├── showBranchSelection()
+        │       └── showHistory()
+        │
+        ├── 📁 components/          # 재사용 가능한 UI 컴포넌트
+        │   ├── 📄 executor.go      # 명령 실행기
+        │   │   └── CommandExecutor
+        │   └── 📄 terraform_helper.go  # Terraform 헬퍼 ⭐
+        │       └── GetTerraformCommandInfo()
+        │
+        └── 📁 dialog/              # 다이얼로그 컴포넌트
+            ├── 📄 confirm.go       # 기본 확인 다이얼로그
+            ├── 📄 settings.go      # 설정 다이얼로그
+            ├── 📄 file_selection.go    # 파일 선택 다이얼로그 ⭐
+            │   └── FileSelectionDialog
+            ├── 📄 terraform_confirm.go # Terraform 확인 ⭐
+            │   └── TerraformConfirmDialog
+            │       └── (Execute/Auto Approve/Cancel)
+            ├── 📄 branch.go        # 브랜치 선택 ⭐
+            │   └── BranchDialog
+            ├── 📄 commit.go        # 커밋 다이얼로그 ⭐
+            │   └── CommitDialog
+            └── 📄 dirty_branch.go  # 더티 브랜치 처리 ⭐
+                └── DirtyBranchDialog
+                    └── (Stash/Commit/Force/Cancel)
 ```
 
 ## 패키지별 역할
 
-### 🆕 새로 추가된 패키지 (v0.2.0)
+### 🆕 v0.3.0에서 추가된 패키지/파일
 
-#### 1. `internal/model/` - 데이터 모델
-- **목적**: 순수한 데이터 구조 정의
-- **특징**: 비즈니스 로직 없음, 재사용 가능
+#### `internal/db/` - 데이터베이스
+- **목적**: 영구 데이터 저장
 - **파일**:
-  - `terraform.go`: TerraformDirectory, TerraformStatus, HelmRelease
-  - `git.go`: GitStatus
+  - `history.go`: SQLite 히스토리 DB
+    - `HistoryDB`: DB 연결 및 쿼리
+    - `HistoryEntry`: 히스토리 엔트리 모델
 
-#### 2. `internal/dao/` - 데이터 접근 계층
-- **목적**: 외부 시스템과의 상호작용
-- **특징**: CLI 실행, 파일 시스템 접근
-- **파일**:
-  - `terraform.go`: TerraformDAO - Terraform 작업
-  - `git.go`: GitDAO - Git 작업
+#### `internal/view/` - 추가된 뷰들
+- **help_view.go**: 도움말 화면
+- **history_view.go**: 히스토리 화면 (페이지네이션, 상세보기)
+- **command_view.go**: 커맨드 입력 모드
 
-#### 3. `internal/view/` - UI 뷰 컴포넌트
-- **목적**: 재사용 가능한 UI 컴포넌트
-- **특징**: tview 위젯 래핑, 독립적 동작
-- **파일**:
-  - `tree_view.go`: TreeView - 파일 트리
-  - `content_view.go`: ContentView - 메인 컨텐츠
-  - `header_view.go`: HeaderView - 헤더
-  - `status_bar.go`: StatusBar - 상태바
+#### `internal/ui/dialog/` - 추가된 다이얼로그들
+- **file_selection.go**: 파일 선택 (미리보기 지원)
+- **terraform_confirm.go**: Terraform 실행 확인 (3버튼)
+- **branch.go**: Git 브랜치 선택
+- **commit.go**: 커밋 메시지 입력
+- **dirty_branch.go**: 더티 브랜치 처리
 
-#### 4. `internal/ui/components/` - UI 컴포넌트
-- **목적**: 복잡한 UI 로직
-- **파일**:
-  - `executor.go`: CommandExecutor - 명령 실행
-
-#### 5. `internal/ui/dialog/` - 다이얼로그
-- **목적**: 모달 다이얼로그
-- **파일**:
-  - `confirm.go`: ConfirmDialog - 확인 창
-  - `settings.go`: SettingsDialog - 설정 창
-
-### 🔄 기존 패키지
-
-#### `cmd/t9s/` - CLI 진입점
-- `main.go`: v0.2.0에서 NewAppNew() 사용
-
-#### `internal/ui/` - UI 애플리케이션
-- `app.go`: 레거시 (v0.1.0, 호환성 유지)
-- `app_new.go`: 새 구조 (v0.2.0) ⭐
-
-#### `internal/config/` - 설정 관리
-- `config.go`: YAML 설정 로드/저장
-
-#### `internal/terraform/` - 레거시 (추후 제거)
-- `manager.go`: v0.1.0 Terraform 매니저
-
-#### `internal/git/` - 레거시 (추후 제거)
-- `manager.go`: v0.1.0 Git 매니저
+---
 
 ## 데이터 흐름
 
@@ -148,46 +134,36 @@ T9s/
     ↓
 AppNew (internal/ui/app_new.go)
     ↓
-CommandExecutor (internal/ui/components/executor.go)
+Dialog (file_selection, terraform_confirm 등)
     ↓
-TerraformDAO / GitDAO (internal/dao/)
+Components (executor.go, terraform_helper.go)
     ↓
-Terraform CLI / Git CLI
+Git Manager / Terraform CLI
     ↓
-Model (internal/model/)
+HistoryDB (internal/db/history.go)
     ↓
-View (internal/view/)
+View (content_view, history_view 등)
     ↓
 화면 표시
 ```
 
-## 파일 크기 비교
+---
 
-### v0.1.0
-- `internal/ui/app.go`: ~650 줄 (단일 파일)
+## 파일 크기
 
-### v0.2.0
-- `internal/ui/app_new.go`: ~200 줄
-- `internal/view/tree_view.go`: ~100 줄
-- `internal/view/content_view.go`: ~80 줄
-- `internal/view/header_view.go`: ~90 줄
-- `internal/view/status_bar.go`: ~50 줄
-- `internal/ui/components/executor.go`: ~180 줄
-- `internal/ui/dialog/confirm.go`: ~30 줄
-- `internal/ui/dialog/settings.go`: ~80 줄
+| 파일 | 라인 수 | 역할 |
+|------|---------|------|
+| `app_new.go` | ~1100 | 메인 앱 로직 |
+| `history.go` (db) | ~240 | 히스토리 DB |
+| `content_view.go` | ~200 | 컨텐츠 뷰 |
+| `header_view.go` | ~130 | 헤더 뷰 |
+| `tree_view.go` | ~150 | 트리 뷰 |
+| `help_view.go` | ~150 | 도움말 뷰 |
+| `history_view.go` | ~200 | 히스토리 뷰 |
+| `terraform_confirm.go` | ~100 | 확인 다이얼로그 |
+| `file_selection.go` | ~150 | 파일 선택 다이얼로그 |
 
-**총 라인 수**: 비슷하지만 **관심사 분리**로 **유지보수성 대폭 향상** ⬆️
-
-## k9s 스타일 비교
-
-| k9s | T9s | 상태 |
-|-----|-----|------|
-| internal/model/ | internal/model/ | ✅ 구현 |
-| internal/dao/ | internal/dao/ | ✅ 구현 |
-| internal/view/ | internal/view/ | ✅ 구현 |
-| internal/render/ | (미구현) | 📝 추후 |
-| internal/ui/ | internal/ui/ | ✅ 구현 |
-| internal/config/ | internal/config/ | ✅ 구현 |
+---
 
 ## 빌드 정보
 
@@ -196,23 +172,13 @@ View (internal/view/)
 go build -o t9s ./cmd/t9s
 
 # 결과
--rwxr-xr-x  t9s  4.9MB
+-rwxr-xr-x  t9s  ~5MB
 
 # 버전
 ./t9s --version
-# T9s version 0.2.0
+# T9s version 0.3.0
 ```
-
-## 다음 단계
-
-1. ✅ k9s 스타일 아키텍처 적용
-2. 📝 새로운 기능 추가 (새 구조 활용)
-3. 🗑️ 레거시 코드 제거
-4. 🧪 테스트 작성
 
 ---
 
-**주의**: ⭐ 표시된 항목은 v0.2.0에서 새로 추가된 부분입니다.
-
-
-
+**주의**: ⭐ 표시된 항목은 v0.3.0에서 새로 추가/수정된 부분입니다.

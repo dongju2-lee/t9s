@@ -1,4 +1,4 @@
-# T9s 프로젝트 구조
+# T9s 프로젝트 구조 (v0.3.0)
 
 ```
 T9s/
@@ -7,69 +7,110 @@ T9s/
 │       └── main.go              # CLI 진입점
 │
 ├── internal/
-│   ├── ui/
-│   │   └── app.go               # tview 기반 UI 컴포넌트
+│   ├── config/
+│   │   └── config.go            # 설정 관리 (YAML)
 │   │
-│   ├── terraform/
-│   │   └── manager.go           # Terraform 작업 관리
-│   │                            # - 디렉토리 스캔
-│   │                            # - Plan/Apply 실행
-│   │                            # - State 조회
-│   │                            # - Helm 릴리스 추출
+│   ├── db/
+│   │   └── history.go           # SQLite 히스토리 DB
 │   │
 │   ├── git/
 │   │   └── manager.go           # Git 통합
-│   │                            # - 상태 확인
-│   │                            # - Diff 조회
-│   │                            # - 커밋 정보
+│   │                            # - 상태 확인, 브랜치 전환
+│   │                            # - Stash, Commit, Diff
 │   │
-│   └── config/
-│       └── config.go            # 설정 관리
-│                                # - YAML 로드/저장
-│                                # - 기본 설정 생성
+│   ├── terraform/
+│   │   └── manager.go           # Terraform 작업 관리
+│   │
+│   ├── model/                   # 데이터 모델
+│   │   ├── terraform.go         # Terraform 관련 모델
+│   │   └── git.go               # Git 관련 모델
+│   │
+│   ├── dao/                     # Data Access Object
+│   │   ├── terraform.go         # Terraform 데이터 접근
+│   │   └── git.go               # Git 데이터 접근
+│   │
+│   ├── view/                    # UI View 컴포넌트
+│   │   ├── tree_view.go         # 파일 트리 뷰
+│   │   ├── content_view.go      # 컨텐츠 표시 뷰
+│   │   ├── header_view.go       # 헤더 뷰 (브랜치 표시)
+│   │   ├── status_bar.go        # 상태바 뷰
+│   │   ├── help_view.go         # 도움말 뷰
+│   │   ├── history_view.go      # 히스토리 뷰
+│   │   └── command_view.go      # 커맨드 입력 뷰
+│   │
+│   └── ui/
+│       ├── app.go               # 레거시 앱
+│       ├── app_new.go           # 새로운 구조의 앱
+│       ├── components/
+│       │   ├── executor.go      # 명령 실행기
+│       │   └── terraform_helper.go  # Terraform 헬퍼
+│       └── dialog/
+│           ├── confirm.go       # 확인 다이얼로그
+│           ├── settings.go      # 설정 다이얼로그
+│           ├── file_selection.go    # 파일 선택 다이얼로그
+│           ├── terraform_confirm.go # Terraform 확인 다이얼로그
+│           ├── branch.go        # 브랜치 선택 다이얼로그
+│           ├── commit.go        # 커밋 다이얼로그
+│           └── dirty_branch.go  # 더티 브랜치 다이얼로그
+│
+├── terra/                       # 테스트용 Terraform 코드
+│   └── test/
+│       ├── monitoring/
+│       └── webapp/
 │
 ├── README.md                    # 프로젝트 설명
 ├── QUICKSTART.md                # 빠른 시작 가이드
-├── TODO.md                      # 로드맵 및 TODO
+├── SETTINGS_GUIDE.md            # 설정 가이드
+├── ARCHITECTURE.md              # 아키텍처 설명
+├── CHANGELOG.md                 # 변경 이력
+├── TODO.md                      # 로드맵
 ├── install.sh                   # 설치 스크립트
 ├── go.mod                       # Go 모듈 정의
-├── go.sum                       # 의존성 체크섬
-├── .gitignore                   # Git 제외 파일
-└── t9s                          # 빌드된 바이너리 (gitignore됨)
+└── go.sum                       # 의존성 체크섬
 ```
 
-## 파일 설명
+## 패키지 설명
 
 ### cmd/t9s/main.go
 - 애플리케이션 진입점
 - 버전 플래그 처리
 - UI 앱 초기화 및 실행
 
-### internal/ui/app.go
-- tview 기반 터미널 UI
-- 헤더, 디렉토리 목록, 상세 패널, 푸터
-- 키보드 단축키 처리
-- k9s 스타일 인터페이스
+### internal/config/config.go
+- `~/.t9s/config.yaml` 관리
+- Terraform 명령어 템플릿
+- Init/Plan/Apply/Destroy 설정
+- 기본 tfvars/conf 파일 경로
 
-### internal/terraform/manager.go
-- Terraform 디렉토리 스캔 및 관리
-- Plan/Apply 실행
-- State 정보 조회
-- Backend 설정 파싱
-- Helm 릴리스 추출 (state에서)
-- Drift 감지
+### internal/db/history.go
+- SQLite 기반 히스토리 DB
+- Apply/Destroy 실행 이력 저장
+- 사용자, 브랜치, tfvars 내용 기록
+- 타임스탬프 관리
 
 ### internal/git/manager.go
 - Git 저장소 상태 확인
-- 브랜치, 수정 파일 정보
+- 브랜치 목록 조회 및 전환
+- Stash/Commit/Force Checkout
 - Diff 조회
-- 커밋 이력
 
-### internal/config/config.go
-- ~/.t9s/config.yaml 관리
-- Terraform root 경로
-- S3 backend 설정
-- 기본 옵션 (자동 새로고침 등)
+### internal/view/
+- **tree_view.go**: 파일 트리 (좌측)
+- **content_view.go**: 컨텐츠 표시 (우측)
+- **header_view.go**: 헤더 (브랜치, 경로 표시)
+- **status_bar.go**: 하단 상태바
+- **help_view.go**: 도움말 화면
+- **history_view.go**: 히스토리 화면
+- **command_view.go**: 커맨드 입력
+
+### internal/ui/dialog/
+- **confirm.go**: 기본 확인 다이얼로그
+- **settings.go**: 설정 다이얼로그
+- **file_selection.go**: 파일 선택 (tfvars/conf)
+- **terraform_confirm.go**: Terraform 실행 확인 (Execute/Auto Approve/Cancel)
+- **branch.go**: 브랜치 선택
+- **commit.go**: 커밋 메시지 입력
+- **dirty_branch.go**: 더티 브랜치 처리 (Stash/Commit/Force)
 
 ## 의존성
 
@@ -77,29 +118,27 @@ T9s/
 require (
     github.com/rivo/tview v0.42.0          // 터미널 UI 프레임워크
     github.com/gdamore/tcell/v2 v2.8.1     // 터미널 제어
+    github.com/mattn/go-sqlite3 v1.14.24   // SQLite 드라이버
     gopkg.in/yaml.v3 v3.0.1                // YAML 파싱
 )
 ```
 
-## 빌드 결과
+## 데이터 저장
 
-- **바이너리 크기**: ~3.8MB
-- **플랫폼**: macOS (현재)
-- **설치 위치**: `/usr/local/bin/t9s`
+| 파일 | 경로 | 설명 |
+|------|------|------|
+| 설정 | `~/.t9s/config.yaml` | 앱 설정 |
+| 히스토리 | `~/.t9s/history.db` | Apply/Destroy 이력 |
 
-## 설정 파일 위치
+## 빌드
 
-- **설정**: `~/.t9s/config.yaml`
-- **로그** (예정): `~/.t9s/logs/`
-- **캐시** (예정): `~/.t9s/cache/`
+```bash
+# 빌드
+go build -o t9s ./cmd/t9s
 
-## 다음 단계
+# 설치
+sudo mv t9s /usr/local/bin/
 
-v0.2.0에서는 UI와 실제 Terraform/Git 매니저를 연결하여:
-1. 설정 파일에서 terraform_root 읽기
-2. 실제 디렉토리 스캔
-3. Git 상태 표시
-4. State 정보 조회
-5. 실시간 drift 감지
-
-구현 예정입니다!
+# 또는 스크립트 사용
+./install.sh
+```

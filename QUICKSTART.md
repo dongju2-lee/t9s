@@ -3,7 +3,7 @@
 ## 1. 설치
 
 ```bash
-cd /Users/idongju/dev/T9s
+cd /path/to/T9s
 ./install.sh
 ```
 
@@ -19,18 +19,17 @@ sudo mv t9s /usr/local/bin/
 첫 실행 시 `~/.t9s/config.yaml` 파일이 자동으로 생성됩니다.
 
 ```yaml
-# Terraform 루트 디렉토리 (서브 디렉토리에 s3, eks 등이 있는 경로)
+# Terraform 루트 디렉토리
 terraform_root: /path/to/your/terraform
 
-# S3 Backend 설정
-backend:
-  bucket: terraform-state
-  region: ap-northeast-2
-  
-# 기본 설정
-defaults:
-  auto_refresh: true
-  refresh_interval: 60
+# 명령어 템플릿
+commands:
+  init_template: "terraform init -backend-config={initconf}"
+  plan_template: "terraform plan -var-file={varfile}"
+  apply_template: "terraform apply -var-file={varfile}"
+  destroy_template: "terraform destroy -var-file={varfile}"
+  tfvars_file: "config/env.tfvars"
+  init_conf_file: "config/env.conf"
 ```
 
 **중요**: `terraform_root`를 실제 Terraform 디렉토리 경로로 변경하세요!
@@ -41,43 +40,86 @@ defaults:
 t9s
 ```
 
-## 4. 키보드 단축키
+## 4. 핵심 단축키
 
-### 네비게이션
-- `↑/↓` - 디렉토리 목록 탐색
-- `Enter` - 디렉토리 선택
-- `Tab` - 패널 간 이동
+### 기본 네비게이션
+| 키 | 설명 |
+|---|---|
+| `Tab` | 포커스 전환 (Tree ↔ Content) |
+| `↑/↓` | 탐색 |
+| `Enter` | 선택/확장 |
+| `Esc` | 뒤로 가기 |
+| `q` | 종료 |
 
 ### Terraform 작업
-- `p` - Terraform Plan 실행
-- `a` - Terraform Apply 실행 (확인 필요)
-- `i` - Terraform Init 실행
+| 키 | 설명 |
+|---|---|
+| `i` | Terraform Init |
+| `p` | Terraform Plan |
+| `a` | Terraform Apply |
+| `d` | Terraform Destroy |
+| `h` | History (이력 조회) |
 
-### 정보 조회
-- `s` - State 정보 보기
-- `g` - Git diff 보기
-- `h` - Helm 차트 목록 보기
-- `l` - 로그 보기
+### 유틸리티
+| 키 | 설명 |
+|---|---|
+| `e` | 파일 편집 ($EDITOR) |
+| `s` | 설정 열기 |
+| `Shift+B` | Git 브랜치 전환 |
+| `?` 또는 `Shift+H` | 도움말 |
+| `/` | 커맨드 모드 |
+| `Shift+C` | 홈 화면 |
 
-### 편집
-- `e` - tfvars 파일 편집
+### Content View (스크롤)
+| 키 | 설명 |
+|---|---|
+| `u` / `d` | 빠른 스크롤 (10줄) |
+| `Shift+↑/↓` | 빠른 스크롤 (10줄) |
 
-### 기타
-- `r` - 새로고침
-- `?` - 도움말
-- `q` - 종료
-- `Ctrl+C` - 강제 종료
+### History View
+| 키 | 설명 |
+|---|---|
+| `d` | 더 보기 |
+| `u` | 접기 |
+| `Shift+M` | 상세 내용 토글 |
 
-## 5. 예상 디렉토리 구조
+## 5. Terraform 실행 흐름
 
-T9s는 다음과 같은 구조를 권장합니다:
+1. **디렉토리 선택**: Tree에서 Terraform 디렉토리로 이동
+2. **명령 실행**: `a` (Apply) 또는 다른 단축키 입력
+3. **파일 선택**: tfvars 파일 선택 다이얼로그에서 선택
+4. **확인 다이얼로그**: 
+   - **Execute**: Plan 결과를 보고 Yes/No 선택
+   - **Auto Approve**: 즉시 실행 (-auto-approve)
+   - **Cancel**: 취소
+5. **결과 확인**: 실시간으로 로그 확인
+
+## 6. 히스토리 기능
+
+Apply/Destroy 실행 이력이 자동으로 저장됩니다:
+- **저장 위치**: `~/.t9s/history.db` (SQLite)
+- **저장 정보**: 디렉토리, 액션, 시간, 사용자, 브랜치, tfvars 내용
+- **조회**: `h` 키로 현재 디렉토리의 이력 확인
+
+## 7. Git 브랜치 전환
+
+`Shift+B`를 누르면:
+1. 로컬 브랜치 목록 표시
+2. 브랜치 선택
+3. 로컬 변경사항이 있으면:
+   - **Stash**: 변경사항 임시 저장
+   - **Commit**: 변경사항 커밋
+   - **Force**: 변경사항 버리고 전환
+
+## 8. 예상 디렉토리 구조
 
 ```
 terraform/
 ├── s3-buckets/
 │   ├── config/
 │   │   ├── prod.tfvars
-│   │   └── dev.tfvars
+│   │   ├── dev.tfvars
+│   │   └── env.conf
 │   ├── main.tf
 │   ├── variables.tf
 │   └── backend.tf
@@ -86,13 +128,11 @@ terraform/
 │   │   └── prod.tfvars
 │   ├── main.tf
 │   └── ...
-├── vpc-network/
-│   └── ...
-└── rds-databases/
+└── vpc-network/
     └── ...
 ```
 
-## 6. 문제 해결
+## 9. 문제 해결
 
 ### Terraform이 인식되지 않는 경우
 ```bash
@@ -100,44 +140,27 @@ which terraform
 # Terraform이 PATH에 있는지 확인
 ```
 
-### Git 상태가 표시되지 않는 경우
-해당 디렉토리가 Git 저장소인지 확인:
+### 히스토리가 저장되지 않는 경우
 ```bash
-cd /path/to/terraform/directory
-git status
+# SQLite 파일 확인
+ls -la ~/.t9s/history.db
 ```
 
-### State를 읽을 수 없는 경우
-Terraform init 실행:
+### 설정이 적용되지 않는 경우
 ```bash
-cd /path/to/terraform/directory
-terraform init
+# 설정 파일 확인
+cat ~/.t9s/config.yaml
 ```
 
-## 7. 개발 모드
-
-소스에서 직접 실행하려면:
-
-```bash
-cd /Users/idongju/dev/T9s
-go run ./cmd/t9s
-```
-
-## 8. 다음 단계
-
-- [ ] 실제 Terraform 디렉토리 경로로 설정 업데이트
-- [ ] 각 디렉토리에서 `terraform init` 실행
-- [ ] T9s 실행 및 테스트
-- [ ] 키보드 단축키 익히기
-
-## 9. 버전 확인
+## 10. 버전 확인
 
 ```bash
 t9s --version
+# T9s version 0.3.0
 ```
 
 ---
 
 **도움이 필요하신가요?**
-- GitHub Issues: https://github.com/idongju/t9s/issues
-- 문서: README.md 참조
+- 앱 내에서 `?` 또는 `Shift+H`를 눌러 도움말 확인
+- README.md 참조
