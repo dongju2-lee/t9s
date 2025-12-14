@@ -31,3 +31,4 @@ Thumbs.db
 
 # Config files (user-specific)
 .p9s/
+.t9s/
